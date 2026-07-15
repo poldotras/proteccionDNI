@@ -455,11 +455,11 @@ footer {
 	gap: 5px;
 }
 
-body.Editando:where(.EnPaso2, .EnPaso3) #Previsualizacion {
+body.Editando:where(.EnPaso3, .EnPaso4) #Previsualizacion {
 	touch-action: none;
 }
 
-body.Editando:where(.EnPaso2, .EnPaso3) #ControlesPosicion {
+body.Editando:where(.EnPaso3, .EnPaso4) #ControlesPosicion {
 	display: flex;
 }
 
@@ -529,7 +529,7 @@ body.EnZoom {
 	justify-content: center;
 }
 
-/* mostrar un indicador en los enlaces que abrirán nueva ventana */
+/* mostrar un indicador en los enlaces que abrirï¿½n nueva ventana */
 a[target='_blank'] {
 	position: relative;
 }

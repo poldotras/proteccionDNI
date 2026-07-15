@@ -2,7 +2,8 @@
 
 function CodigoWorker() {
 	/**
-	* Convertir todo a blanco y negro
+	* Convertir todo a blanco y negro.
+	* Devuelve el recuadro donde se ha detectado el DNI, o null si no se ha podido detectar
 	*/
 	function ConvertirBN(canvas) {
 		const w = canvas.width;
@@ -21,9 +22,72 @@ function CodigoWorker() {
 				}
 			}
 			ctx.putImageData(imgPixels, 0, 0, 0, 0, imgPixels.width, imgPixels.height);
+
+			return DetectarTarjeta(imgPixels);
 		} catch (e) {
 			// da error al usar imagen de prueba con file://
+			return null;
 		}
+	}
+
+	/**
+	* Detectar el recuadro que ocupa el DNI buscando el contraste con el fondo (normalmente blanco).
+	* Trabaja sobre los datos ya convertidos a escala de grises por ConvertirBN.
+	* Devuelve el rectángulo que lo delimita o null si la detección no parece fiable.
+	*/
+	function DetectarTarjeta(imgPixels) {
+		const w = imgPixels.width;
+		const h = imgPixels.height;
+		const data = imgPixels.data;
+
+		// Estimar la luminosidad del fondo con la mediana de los píxeles de los bordes de la foto
+		const muestras = [];
+		const salto = 10;
+		for (let x = 0; x < w; x += salto) {
+			muestras.push(data[x * 4], data[((h - 1) * w + x) * 4]);
+		}
+		for (let y = 0; y < h; y += salto) {
+			muestras.push(data[y * w * 4], data[(y * w + w - 1) * 4]);
+		}
+		muestras.sort((a, b) => a - b);
+		const fondo = muestras[muestras.length >> 1];
+
+		// Contar por filas y columnas cuántos píxeles contrastan con el fondo
+		const umbral = 40;
+		const filas = new Uint32Array(h);
+		const columnas = new Uint32Array(w);
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				if (Math.abs(data[(y * w + x) * 4] - fondo) > umbral) {
+					filas[y]++;
+					columnas[x]++;
+				}
+			}
+		}
+
+		// Buscar los límites del DNI descartando el ruido (filas/columnas con menos del 2% de píxeles con contraste)
+		const minPorFila = w * 0.02;
+		const minPorColumna = h * 0.02;
+		let top = 0;
+		while (top < h && filas[top] < minPorFila)
+			top++;
+		let bottom = h - 1;
+		while (bottom > top && filas[bottom] < minPorFila)
+			bottom--;
+		let left = 0;
+		while (left < w && columnas[left] < minPorColumna)
+			left++;
+		let right = w - 1;
+		while (right > left && columnas[right] < minPorColumna)
+			right--;
+
+		const ancho = right - left + 1;
+		const alto = bottom - top + 1;
+		// si la zona detectada es demasiado pequeña, mejor no fiarse de la detección
+		if (ancho < w * 0.2 || alto < h * 0.2)
+			return null;
+
+		return { x: left, y: top, w: ancho, h: alto };
 	}
 
 	// Si la imagen parece estar en vertical, girarla automáticamente por defecto
@@ -84,10 +148,10 @@ function CodigoWorker() {
 
 		const canvas = ReducirAnchura(PonerHorizontal(img));
 
-		ConvertirBN(canvas);
+		const tarjeta = ConvertirBN(canvas);
 
 		const bitmap = canvas.transferToImageBitmap();
-		self.postMessage(bitmap);
+		self.postMessage({ bitmap, tarjeta });
 	});
 }
 

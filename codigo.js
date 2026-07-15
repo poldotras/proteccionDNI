@@ -109,7 +109,7 @@ document.querySelector('#paso1 p')
 			const formato = FormatosDnis[Formato.value];
 			DivMascaraDni.classList.toggle('Oculto', !formato.MascarasDni);
 			DivValidez.classList.toggle('Oculto', !formato.DatosValidez);
-			CambiarEstadoBoton('2', true);
+			CambiarEstadoBoton('4', true);
 		}
 
 		DibujarMascara();
@@ -126,7 +126,7 @@ document.querySelector('#paso1 p')
 
 Watermark.addEventListener('input', function (e) {
 	DibujarMarcaAgua();
-	CambiarEstadoBoton('4', true);
+	CambiarEstadoBoton('2', true);
 });
 
 // Al hacer click guardarla
@@ -379,7 +379,7 @@ function activarElementoWizard(paso) {
 		//			break;
 
 		case '2':
-			Formato.focus();
+			Watermark.focus();
 			break;
 
 		case '3':
@@ -387,7 +387,7 @@ function activarElementoWizard(paso) {
 			break;
 
 		case '4':
-			Watermark.focus();
+			Formato.focus();
 			break;
 
 		case '5':
@@ -459,7 +459,8 @@ function MostrarImagen(file) {
 	img.onload = function () {
 		URL.revokeObjectURL(img.src)
 
-		CambiarEstadoBoton('2', false);
+		CambiarEstadoBoton('4', false);
+		posicionAutomatica = null;
 		ResetearControles();
 		AjustarVisibilidadResetear();
 
@@ -496,15 +497,9 @@ function PrepararDNI(img) {
 		}
 
 		function handler(e) {
-			imagenDNI_BN = e.data;
+			imagenDNI_BN = e.data.bitmap;
 
-			// Vamos a intentar calcular si puede interesar hacer zoom y desplazar
-			const altoEscalado = canvas.width * imagenDNI_BN.height / imagenDNI_BN.width;
-
-			if (altoEscalado < canvas.height) {
-				Zoom.value = canvas.height / altoEscalado;
-				Horizontal.value = (canvas.width - canvas.width * Zoom.value) / 2;
-			}
+			AjustarPosicionAutomatica(e.data.tarjeta);
 
 			resolve();
 		}
@@ -559,6 +554,94 @@ function CrearProcesador() {
 	}
 }
 
+// Valores de Zoom y desplazamiento calculados al encuadrar automáticamente el DNI en el recuadro
+let posicionAutomatica = null;
+
+// Límites por defecto de los controles de posición, para restaurarlos con cada foto nueva
+const RangosPorDefecto = [Zoom, Horizontal, Vertical].map(control => ({ control, min: control.min, max: control.max }));
+
+/**
+Ajusta el zoom y los desplazamientos para encuadrar el DNI detectado en el recuadro de previsualización.
+Si no se ha podido detectar la tarjeta, aplica el ajuste básico de escalado por anchura.
+*/
+function AjustarPosicionAutomatica(tarjeta) {
+	posicionAutomatica = null;
+	RangosPorDefecto.forEach(rango => {
+		rango.control.min = rango.min;
+		rango.control.max = rango.max;
+	});
+
+	if (tarjeta) {
+		// dejar un pequeño margen alrededor de la zona detectada
+		const margenX = tarjeta.w * 0.02;
+		const margenY = tarjeta.h * 0.02;
+		const x = Math.max(0, tarjeta.x - margenX);
+		const y = Math.max(0, tarjeta.y - margenY);
+		const w = Math.min(imagenDNI_BN.width, tarjeta.x + tarjeta.w + margenX) - x;
+		const h = Math.min(imagenDNI_BN.height, tarjeta.y + tarjeta.h + margenY) - y;
+
+		// escala para que la zona detectada quepa completa y centrada en el canvas
+		// el control de Zoom se aplica sobre la anchura del canvas
+		const zoom = Math.round(Math.min(canvas.width / w, canvas.height / h) * imagenDNI_BN.width / canvas.width * 1000) / 1000;
+		const escala = zoom * canvas.width / imagenDNI_BN.width;
+
+		posicionAutomatica = {
+			zoom,
+			horizontal: Math.round((canvas.width - w * escala) / 2 - x * escala),
+			vertical: Math.round((canvas.height - h * escala) / 2 - y * escala),
+		};
+	} else {
+		// Vamos a intentar calcular si puede interesar hacer zoom y desplazar
+		const altoEscalado = canvas.width * imagenDNI_BN.height / imagenDNI_BN.width;
+
+		if (altoEscalado < canvas.height) {
+			const zoom = Math.min(parseFloat(Zoom.max), Math.round(canvas.height / altoEscalado * 1000) / 1000);
+			posicionAutomatica = {
+				zoom,
+				horizontal: Math.round((canvas.width - canvas.width * zoom) / 2),
+				vertical: 0,
+			};
+		}
+	}
+
+	if (posicionAutomatica) {
+		AsignarValorAmpliandoRango(Zoom, posicionAutomatica.zoom);
+		AsignarValorAmpliandoRango(Horizontal, posicionAutomatica.horizontal);
+		AsignarValorAmpliandoRango(Vertical, posicionAutomatica.vertical);
+	}
+}
+
+/**
+Asigna un valor a un control de rango ampliando sus límites si hace falta,
+dejando holgura para que se pueda seguir ajustando a mano en ambas direcciones
+*/
+function AsignarValorAmpliandoRango(input, valor) {
+	const holgura = (parseFloat(input.max) - parseFloat(input.min)) / 4;
+	if (valor < parseFloat(input.min))
+		input.min = valor - holgura;
+	if (valor > parseFloat(input.max))
+		input.max = valor + holgura;
+
+	input.value = valor;
+}
+
+/**
+Valor inicial de un control de posición, teniendo en cuenta el encuadre automático
+*/
+function ValorInicial(control) {
+	if (posicionAutomatica) {
+		switch (control) {
+			case Zoom:
+				return posicionAutomatica.zoom;
+			case Horizontal:
+				return posicionAutomatica.horizontal;
+			case Vertical:
+				return posicionAutomatica.vertical;
+		}
+	}
+	return control.defaultValue;
+}
+
 /**
 Vuelve a poner los controles de posición y rotación con los valores iniciales
 */
@@ -566,13 +649,13 @@ function ResetearControles() {
 	rotacion = 0;
 
 	[Rotacion, Horizontal, Vertical, Zoom].forEach(function (control) {
-		control.value = control.defaultValue;
+		control.value = ValorInicial(control);
 	});
 }
 
 function AjustarVisibilidadResetear() {
 	const Movido = rotacion != 0 || [Rotacion, Horizontal, Vertical, Zoom]
-		.some((control) => control.value != control.defaultValue);
+		.some((control) => control.value != ValorInicial(control));
 
 	Resetear.style.display = Movido ? '' : 'none';
 }
@@ -1004,8 +1087,8 @@ function initGestures() {
 }
 
 function pointerdownHandler(ev) {
-	// mover/ ajustar la imagen solo en el paso de tipo y posición
-	if (pasoActual != '2' && pasoActual != '3')
+	// mover/ ajustar la imagen solo en los pasos de posición y tipo
+	if (pasoActual != '3' && pasoActual != '4')
 		return;
 
 	// The pointerdown event signals the start of a touch interaction.

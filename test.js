@@ -22,6 +22,7 @@ function CambiarImagenTest(ev) {
 	nombreFichero = img.src;
 
 	ActivarModoEdicion();
+	posicionAutomatica = null;
 	ResetearControles();
 	Previsualizacion.style.display = 'block';
 

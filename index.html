@@ -68,7 +68,7 @@
 					<div class="node"></div>
 				</div>
 				<div class="step" id="step2">
-					<span class="step-name">Tipo</span>
+					<span class="step-name">Texto</span>
 					<div class="node"></div>
 				</div>
 				<div class="step" id="step3">
@@ -76,7 +76,7 @@
 					<div class="node"></div>
 				</div>
 				<div class="step" id="step4">
-					<span class="step-name">Texto</span>
+					<span class="step-name">Tipo</span>
 					<div class="node"></div>
 				</div>
 				<div class="step" id="step5">
@@ -93,14 +93,10 @@
 				</div>
 			</details>
 			<details id="paso2" name="paso">
-				<summary>Tipo de foto</summary>
+				<summary>Texto</summary>
 				<div>
-					<p>
-						Elige si estás usando la foto delantera o trasera del DNI; puedes ajustar el tamaño y posición del DNI a continuación.
-					</p>
-					<div><label for="Formato">Tipo de foto</label> <select id="Formato"></select></div>
-					<div id="DivValidez" class="CampoCheckbox Oculto"><label for="Validez">Ocultar Fecha de Nacimiento, Validez y Nº Soporte</label> <span><input type="checkbox" id="Validez"> <a href="#OcultarNumeroSoporte" id="AyudaOcultarNumeroSoporte" class="AbrirInfo">¿qué es esto?</a></span></div>
-					<div id="DivMascaraDni" class="CampoCheckbox Oculto"><label for="EnmascararDni">Ocultar parcialmente el DNI</label> <span><input type="checkbox" id="EnmascararDni"> <a href="#OcultarParcialmente" id="AyudaOcultarParcialmente" class="AbrirInfo">¿qué es esto?</a></span></div>
+					<p>Escribe un texto para añadir sobre la imagen.</p>
+					<div class="ContenedorControl"><label for="Watermark">Sobreescribir: </label> <input type="text" id="Watermark" value="Copia para …"></div>
 					<div class="Siguiente">
 						<button class="btn atras" type="button" data-siguiente="1"><span><svg viewBox="0 0 24 24" role="presentation"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>Anterior</span></button>
 						<button class="btn adelante" type="button" data-siguiente="3"><span>Siguiente<svg viewBox="0 0 24 24" role="presentation"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" /></svg></span></button>
@@ -110,12 +106,12 @@
 			<details id="paso3" name="paso">
 				<summary>Posición</summary>
 				<div>
-					<p>Ajusta la orientación y posición para que el DNI se vea correctamente.</p>
+					<p>La página intenta encuadrar el DNI automáticamente; ajusta la orientación y posición si es necesario para que se vea correctamente.</p>
 					<div id="ControlesDesplazamiento">
-						<div class="ContenedorControl"><label for="Zoom">Acercar</label> <input type="range" min="0.8" max="2" id="Zoom" value="1" step="any"></div>
+						<div class="ContenedorControl"><label for="Zoom">Acercar</label> <input type="range" min="0.8" max="3" id="Zoom" value="1" step="any"></div>
 						<div class="ContenedorControl"><label for="Rotacion">Rotar</label> <input type="range" min="-10" max="10" id="Rotacion" value="0" step="any"></div>
-						<div class="ContenedorControl"><label for="Horizontal">Desp. Horizontal</label> <input type="range" min="-200" max="200" id="Horizontal" value="0"></div>
-						<div class="ContenedorControl"><label for="Vertical">Desp. Vertical</label> <input type="range" min="-200" max="200" id="Vertical" value="0"></div>
+						<div class="ContenedorControl"><label for="Horizontal">Desp. Horizontal</label> <input type="range" min="-500" max="500" id="Horizontal" value="0"></div>
+						<div class="ContenedorControl"><label for="Vertical">Desp. Vertical</label> <input type="range" min="-500" max="500" id="Vertical" value="0"></div>
 					</div>
 					<div class="Siguiente">
 						<button class="btn atras" type="button" data-siguiente="2"><span><svg viewBox="0 0 24 24" role="presentation"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>Anterior</span></button>
@@ -124,10 +120,14 @@
 				</div>
 			</details>
 			<details id="paso4" name="paso">
-				<summary>Texto</summary>
+				<summary>Tipo de foto</summary>
 				<div>
-					<p>Escribe un texto para añadir sobre la imagen.</p>
-					<div class="ContenedorControl"><label for="Watermark">Sobreescribir: </label> <input type="text" id="Watermark" value="Copia para …"></div>
+					<p>
+						Elige si estás usando la foto delantera o trasera del DNI para que se oculten los datos que no son necesarios.
+					</p>
+					<div><label for="Formato">Tipo de foto</label> <select id="Formato"></select></div>
+					<div id="DivValidez" class="CampoCheckbox Oculto"><label for="Validez">Ocultar Fecha de Nacimiento, Validez y Nº Soporte</label> <span><input type="checkbox" id="Validez"> <a href="#OcultarNumeroSoporte" id="AyudaOcultarNumeroSoporte" class="AbrirInfo">¿qué es esto?</a></span></div>
+					<div id="DivMascaraDni" class="CampoCheckbox Oculto"><label for="EnmascararDni">Ocultar parcialmente el DNI</label> <span><input type="checkbox" id="EnmascararDni"> <a href="#OcultarParcialmente" id="AyudaOcultarParcialmente" class="AbrirInfo">¿qué es esto?</a></span></div>
 					<div class="Siguiente">
 						<button class="btn atras" type="button" data-siguiente="3"><span><svg viewBox="0 0 24 24" role="presentation"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>Anterior</span></button>
 						<button class="btn adelante" type="button" data-siguiente="5"><span>Siguiente<svg viewBox="0 0 24 24" role="presentation"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" /></svg></span></button>
@@ -169,9 +169,9 @@
 					<p>Se trata de seguir los pasos que recomienda la policía para proteger tu DNI, sin necesidad de que tengas que acordarte de todos y saber qué datos son importantes.</p>
 					<ol>
 						<li>Elige una foto de tu DNI. La imagen se convierte a blanco y negro y se limita su tamaño para no dar una copia de alta calidad.</li>
-						<li>Elige el formato de DNI que tienes y si es la parte delantera o trasera. En base a eso se ocultan los datos que no son necesario que nadie vea.</li>
-						<li>Ajusta si es necesario la posición de la foto para que se vea bien en la previsualización.</li>
 						<li>Añade un texto que se sobreescribirá como marca de agua, indicando para qué compartes la foto.</li>
+						<li>Ajusta si es necesario la posición de la foto para que se vea bien en la previsualización; la página intenta encuadrar el DNI automáticamente.</li>
+						<li>Elige el formato de DNI que tienes y si es la parte delantera o trasera. En base a eso se ocultan los datos que no son necesario que nadie vea.</li>
 						<li>Pulsa en el botón para descargar la foto.</li>
 					</ol>
 				</div>

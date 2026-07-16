@@ -149,7 +149,6 @@ botonGrabar.disabled = true;
 configurarDobleClickComoReset('#ControlesDesplazamiento');
 configurarGiro();
 configurarEditorEsquinas();
-configurarVistasPosicion();
 
 AsignarWatermarkPorDefecto(Watermark);
 
@@ -398,7 +397,7 @@ function activarElementoWizard(paso) {
 			break;
 
 		case '3':
-			document.getElementById('BtnVistaOriginal').focus();
+			MarcoEsquinas.focus();
 			break;
 
 		case '4':
@@ -476,7 +475,6 @@ function MostrarImagen(file) {
 
 		CambiarEstadoBoton('4', false);
 		posicionAutomatica = null;
-		CambiarVistaPosicion(true);
 		ResetearControles();
 		AjustarVisibilidadResetear();
 
@@ -660,23 +658,17 @@ function AjustarPosicionAutomatica(tarjeta) {
 	});
 
 	if (tarjeta) {
-		// dejar un pequeño margen alrededor de la zona detectada
-		const margenX = tarjeta.w * 0.02;
-		const margenY = tarjeta.h * 0.02;
-		const x = Math.max(0, tarjeta.x - margenX);
-		const y = Math.max(0, tarjeta.y - margenY);
-		const w = Math.min(imagenDNI_BN.width, tarjeta.x + tarjeta.w + margenX) - x;
-		const h = Math.min(imagenDNI_BN.height, tarjeta.y + tarjeta.h + margenY) - y;
-
-		// escala para que la zona detectada quepa completa y centrada en el canvas
+		// escala para que la zona detectada llene el canvas sin márgenes,
+		// de forma que las máscaras de censura caigan donde corresponde;
 		// el control de Zoom se aplica sobre la anchura del canvas
-		const zoom = Math.round(Math.min(canvas.width / w, canvas.height / h) * imagenDNI_BN.width / canvas.width * 1000) / 1000;
+		// (se redondea lo justo para que los valores sobrevivan el paso por los inputs de rango)
+		const zoom = Math.round(Math.min(canvas.width / tarjeta.w, canvas.height / tarjeta.h) * imagenDNI_BN.width / canvas.width * 10000) / 10000;
 		const escala = zoom * canvas.width / imagenDNI_BN.width;
 
 		posicionAutomatica = {
 			zoom,
-			horizontal: Math.round((canvas.width - w * escala) / 2 - x * escala),
-			vertical: Math.round((canvas.height - h * escala) / 2 - y * escala),
+			horizontal: Math.round((canvas.width - tarjeta.w * escala) / 2 - tarjeta.x * escala),
+			vertical: Math.round((canvas.height - tarjeta.h * escala) / 2 - tarjeta.y * escala),
 		};
 	} else {
 		// Vamos a intentar calcular si puede interesar hacer zoom y desplazar
@@ -751,6 +743,9 @@ function EsConvexo(esquinas) {
 // escala y desplazamiento con los que se muestra la imagen original dentro del editor de esquinas
 let transformacionEditor = { escala: 1, x: 0, y: 0 };
 
+// la zona de selección deja libre la parte derecha, donde arriba se coloca la miniatura del resultado
+const ZonaEditor = { w: 645, h: 625 };
+
 /**
 Dibujar la imagen original en el editor y colocar el marco con las 4 esquinas
 */
@@ -762,11 +757,11 @@ function DibujarEditorEsquinas() {
 	ctx.fillStyle = 'white';
 	ctx.fillRect(0, 0, canvasOriginal.width, canvasOriginal.height);
 
-	const escala = Math.min(canvasOriginal.width / imagenOriginalBN.width, canvasOriginal.height / imagenOriginalBN.height);
+	const escala = Math.min(ZonaEditor.w / imagenOriginalBN.width, ZonaEditor.h / imagenOriginalBN.height);
 	transformacionEditor = {
 		escala,
-		x: (canvasOriginal.width - imagenOriginalBN.width * escala) / 2,
-		y: (canvasOriginal.height - imagenOriginalBN.height * escala) / 2,
+		x: (ZonaEditor.w - imagenOriginalBN.width * escala) / 2,
+		y: (ZonaEditor.h - imagenOriginalBN.height * escala) / 2,
 	};
 	ctx.drawImage(imagenOriginalBN, transformacionEditor.x, transformacionEditor.y, imagenOriginalBN.width * escala, imagenOriginalBN.height * escala);
 
@@ -843,31 +838,30 @@ function configurarEditorEsquinas() {
 	MarcoEsquinas.addEventListener('pointercancel', soltar);
 }
 
-// En el paso de posición se puede alternar entre la foto original con las esquinas y el resultado enderezado
-let vistaOriginal = true;
-
-function configurarVistasPosicion() {
-	document.getElementById('BtnVistaOriginal')
-		.addEventListener('click', () => CambiarVistaPosicion(true));
-	document.getElementById('BtnVistaEnderezada')
-		.addEventListener('click', () => CambiarVistaPosicion(false));
-}
-
-function CambiarVistaPosicion(original) {
-	vistaOriginal = original;
-	document.getElementById('BtnVistaOriginal').classList.toggle('seleccionada', original);
-	document.getElementById('BtnVistaEnderezada').classList.toggle('seleccionada', !original);
-	AjustarVistaPosicion();
-
-	if (original)
-		DibujarEditorEsquinas();
-}
-
 /**
-El editor de esquinas solo se muestra dentro del paso de posición con la vista Original elegida
+El editor de esquinas se muestra dentro del paso de posición, con la miniatura del resultado enderezado
 */
 function AjustarVistaPosicion() {
-	document.body.classList.toggle('EnVistaOriginal', vistaOriginal && pasoActual == '3');
+	const enEditor = pasoActual == '3';
+	document.body.classList.toggle('EnVistaOriginal', enEditor);
+	if (enEditor) {
+		DibujarEditorEsquinas();
+		ActualizarMiniatura();
+	}
+}
+
+const canvasMiniatura = document.getElementById('canvasMiniatura');
+
+/**
+Actualizar la miniatura con la composición actual: imagen enderezada, máscaras y texto
+*/
+function ActualizarMiniatura() {
+	const ctx = canvasMiniatura.getContext('2d', { alpha: false });
+	ctx.fillStyle = 'white';
+	ctx.fillRect(0, 0, canvasMiniatura.width, canvasMiniatura.height);
+	ctx.drawImage(canvas, 0, 0);
+	ctx.drawImage(canvasMascara, 0, 0);
+	ctx.drawImage(canvasWatermark, 0, 0);
 }
 
 /**
@@ -991,6 +985,8 @@ function RedibujarEnDNIEnRAF() {
 	// volcar Imagen DNI escalada y con desplazamiento
 	const aspectRatio = canvasOrigen.height / canvasOrigen.width;
 	ctx.drawImage(canvasOrigen, Horizontal.value, Vertical.value, canvas.width * Zoom.value, canvas.width * Zoom.value * aspectRatio);
+
+	ActualizarMiniatura();
 }
 
 /** Ocultar las partes de la imagen que no hacen ninguna falta, dependerá del formato de DNI y el lado */
@@ -1029,6 +1025,8 @@ function DibujarMascara() {
 			ctx.fillText('**', bloque.x, bloque.y + bloque.h + 20);
 		}
 	}
+
+	ActualizarMiniatura();
 }
 
 /**
@@ -1039,13 +1037,17 @@ function DibujarMarcaAgua() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	const texto = Watermark.value;
 	// Si ha borrado todo el texto, no escribir nada
-	if (!texto)
+	if (!texto) {
+		ActualizarMiniatura();
 		return;
+	}
 
 	const marcas = FormatosDnis[Formato.value].Watermarks;
 	marcas.forEach(marca => {
 		RellenarTexto(texto, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
 	});
+
+	ActualizarMiniatura();
 }
 
 /**

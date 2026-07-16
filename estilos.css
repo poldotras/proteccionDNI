@@ -580,22 +580,7 @@ a[href^='#'] {
 	}
 }
 
-/* Editor de esquinas del paso Posición: dos vistas (Original con los 4 puntos / Enderezada) */
-#VistasPosicion {
-	display: flex;
-	gap: .5em;
-	margin: 10px 0;
-}
-
-#VistasPosicion .seleccionada {
-	background-color: var(--colorFondoBotonPrincipal);
-	color: var(--colorBotonPrincipal);
-}
-
-.EnVistaOriginal #ControlesDesplazamiento {
-	display: none;
-}
-
+/* Editor de esquinas del paso Posición: los 4 puntos arrastrables con la miniatura del resultado */
 #EditorEsquinas {
 	display: none;
 	position: absolute;
@@ -613,6 +598,16 @@ a[href^='#'] {
 	width: 100%;
 	height: 100%;
 	touch-action: none;
+}
+
+/* miniatura con el resultado enderezado, como la vista previa de una presentación */
+#Previsualizacion #canvasMiniatura {
+	left: auto;
+	right: 0;
+	width: 34%;
+	border: 1px solid #888;
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .3);
+	box-sizing: border-box;
 }
 
 #PoligonoEsquinas {
@@ -635,6 +630,12 @@ a[href^='#'] {
 
 body.EnVistaOriginal #ControlesPosicion {
 	display: none;
+}
+
+/* en el editor de esquinas el botón de ampliar se pasa a la izquierda para no tapar la miniatura */
+body.EnVistaOriginal #ControlesPantalla {
+	right: auto;
+	left: 0;
 }
 
 /* zona ampliada alrededor de cada esquina para poder arrastrarla bien con el dedo */

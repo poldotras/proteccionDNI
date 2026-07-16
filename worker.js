@@ -141,7 +141,7 @@ function CodigoWorker() {
 	}
 
 	/**
-	* Buscar las 4 esquinas del bloque detectado: los puntos extremos en las 4 diagonales.
+	* Buscar las 4 esquinas aproximadas del bloque detectado: los puntos extremos en las 4 diagonales.
 	* Funciona bien mientras la tarjeta no esté girada más de ~40º, que es lo esperable en una foto.
 	*/
 	function EsquinasComponente(m, etiquetas, mejor, dilataciones) {
@@ -171,6 +171,134 @@ function CodigoWorker() {
 
 		// pasar de celdas de la máscara a coordenadas de la imagen
 		return [tl, tr, br, bl].map(p => ({ x: (p.x + 0.5) * factor, y: (p.y + 0.5) * factor }));
+	}
+
+	/**
+	* Afinar las esquinas aproximadas trabajando sobre la imagen en gris a resolución completa.
+	* Para cada lado se busca el borde real de la tarjeta en una franja estrecha alrededor del
+	* segmento entre esquinas y se ajusta una recta; como el DNI tiene las esquinas redondeadas,
+	* la esquina buscada es la intersección de las rectas de los dos lados, no el borde en sí.
+	*/
+	function RefinarEsquinas(imgPixels, esquinas, fondo) {
+		const w = imgPixels.width;
+		const h = imgPixels.height;
+		const data = imgPixels.data;
+
+		// umbral más sensible que el de la máscara para pillar también bordes débiles,
+		// que no da problemas porque solo se busca en la franja alrededor del segmento
+		const umbral = 25;
+		const franja = 25;
+
+		function contrasta(x, y) {
+			if (x < 0 || y < 0 || x >= w || y >= h)
+				return false;
+			return Math.abs(data[(y * w + x) * 4] - fondo) > umbral;
+		}
+
+		/**
+		* Puntos del borde de un lado: para cada posición entre las dos esquinas (descartando un
+		* 15% en cada extremo por el redondeo) se busca desde fuera el primer píxel con contraste
+		* dentro de la franja. porColumnas recorre x buscando en y (lados horizontales) o al revés.
+		*/
+		function puntosLado(pa, pb, porColumnas, desdeElPrincipio) {
+			const ua = porColumnas ? pa.x : pa.y;
+			const ub = porColumnas ? pb.x : pb.y;
+			const va = porColumnas ? pa.y : pa.x;
+			const vb = porColumnas ? pb.y : pb.x;
+
+			const puntos = [];
+			const margen = Math.abs(ub - ua) * 0.15;
+			const u0 = Math.round(Math.min(ua, ub) + margen);
+			const u1 = Math.round(Math.max(ua, ub) - margen);
+			for (let u = u0; u <= u1; u += 2) {
+				const vSegmento = va + (vb - va) * (u - ua) / (ub - ua);
+				const vInicio = Math.round(desdeElPrincipio ? vSegmento - franja : vSegmento + franja);
+				const paso = desdeElPrincipio ? 1 : -1;
+				for (let i = 0; i <= franja * 2; i++) {
+					const v = vInicio + i * paso;
+					if (porColumnas ? contrasta(u, v) : contrasta(v, u)) {
+						// si ya hay contraste en el primer píxel es que la franja está dentro
+						// de la tarjeta y no estamos viendo el borde: no vale como punto
+						if (i > 0)
+							puntos.push({ u, v });
+						break;
+					}
+				}
+			}
+			return { puntos, cobertura: puntos.length / Math.max(1, (u1 - u0) / 2) };
+		}
+
+		/**
+		* Ajuste de recta v = a + b·u por mínimos cuadrados de forma iterativa:
+		* en cada pasada se descartan los puntos que se alejan del ajuste anterior
+		* (sombras, brillos o ruido en el borde) y se vuelve a calcular
+		*/
+		function AjustarRecta(lado) {
+			function calcular(pts) {
+				let su = 0, sv = 0, suu = 0, suv = 0;
+				pts.forEach(p => {
+					su += p.u;
+					sv += p.v;
+					suu += p.u * p.u;
+					suv += p.u * p.v;
+				});
+				const n = pts.length;
+				const den = n * suu - su * su;
+				if (Math.abs(den) < 1e-9)
+					return null;
+				const b = (n * suv - su * sv) / den;
+				return [(sv - b * su) / n, b];
+			}
+
+			// exigir haber encontrado el borde en una parte razonable del lado
+			if (lado.cobertura < 0.35 || lado.puntos.length < 10)
+				return null;
+
+			let puntos = lado.puntos;
+			let recta = calcular(puntos);
+			if (!recta)
+				return null;
+
+			for (let pasada = 0; pasada < 3; pasada++) {
+				const residuos = puntos.map(p => Math.abs(p.v - (recta[0] + recta[1] * p.u)));
+				const ordenados = [...residuos].sort((a, b) => a - b);
+				const limite = Math.max(2, ordenados[ordenados.length >> 1] * 2);
+				const cerca = puntos.filter((p, i) => residuos[i] <= limite);
+				// si hay que descartar demasiados puntos es que esto no es un borde recto
+				if (cerca.length < lado.puntos.length * 0.5)
+					return null;
+
+				const nueva = calcular(cerca);
+				if (!nueva)
+					return null;
+				recta = nueva;
+				puntos = cerca;
+			}
+			return recta;
+		}
+
+		const [tl, tr, br, bl] = esquinas;
+		const rectaSup = AjustarRecta(puntosLado(tl, tr, true, true));
+		const rectaInf = AjustarRecta(puntosLado(bl, br, true, false));
+		const rectaIzq = AjustarRecta(puntosLado(tl, bl, false, true));
+		const rectaDer = AjustarRecta(puntosLado(tr, br, false, false));
+
+		// si algún lado no es fiable, quedarse con las esquinas aproximadas
+		if (!rectaSup || !rectaInf || !rectaIzq || !rectaDer)
+			return esquinas;
+
+		// la esquina es la intersección de las rectas horizontal (y = h0 + h1·x) y vertical (x = v0 + v1·y)
+		function interseccion(recH, recV) {
+			const y = (recH[0] + recH[1] * recV[0]) / (1 - recH[1] * recV[1]);
+			return { x: recV[0] + recV[1] * y, y };
+		}
+
+		return [
+			interseccion(rectaSup, rectaIzq),
+			interseccion(rectaSup, rectaDer),
+			interseccion(rectaInf, rectaDer),
+			interseccion(rectaInf, rectaIzq),
+		];
 	}
 
 	function Distancia(p1, p2) {
@@ -249,7 +377,17 @@ function CodigoWorker() {
 		if (!mejor || tam < m.mw * m.mh * 0.04)
 			return null;
 
-		const esquinas = EsquinasComponente(m, etiquetas, mejor, dilataciones);
+		// dos pasadas de refinado: la primera acerca las esquinas al borde real y la segunda,
+		// con la franja de búsqueda ya bien centrada, las deja clavadas
+		let esquinas = EsquinasComponente(m, etiquetas, mejor, dilataciones);
+		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo);
+		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo);
+
+		// las intersecciones de las rectas pueden quedar algo fuera de la imagen, las limitamos
+		esquinas = esquinas.map(p => ({
+			x: Math.min(Math.max(p.x, 0), imgPixels.width),
+			y: Math.min(Math.max(p.y, 0), imgPixels.height),
+		}));
 		return ValidarEsquinas(esquinas, imgPixels.width, imgPixels.height);
 	}
 

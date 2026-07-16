@@ -106,12 +106,8 @@
 			<details id="paso3" name="paso">
 				<summary>Posición</summary>
 				<div>
-					<p>Coloca los 4 puntos sobre las esquinas del DNI en la vista Original; en la vista Enderezada verás el resultado recto y podrás afinarlo.</p>
-					<div id="VistasPosicion">
-						<button class="btn seleccionada" type="button" id="BtnVistaOriginal"><span>Original</span></button>
-						<button class="btn" type="button" id="BtnVistaEnderezada"><span>Enderezada</span></button>
-					</div>
-					<div id="ControlesDesplazamiento">
+					<p>Arrastra los 4 puntos hasta las esquinas del DNI; la miniatura muestra cómo quedará la imagen enderezada.</p>
+					<div id="ControlesDesplazamiento" class="Oculto">
 						<div class="ContenedorControl"><label for="Zoom">Acercar</label> <input type="range" min="0.8" max="3" id="Zoom" value="1" step="any"></div>
 						<div class="ContenedorControl"><label for="Rotacion">Rotar</label> <input type="range" min="-10" max="10" id="Rotacion" value="0" step="any"></div>
 						<div class="ContenedorControl"><label for="Horizontal">Desp. Horizontal</label> <input type="range" min="-500" max="500" id="Horizontal" value="0"></div>
@@ -153,6 +149,7 @@
 				<canvas id="canvas" width="1000" height="625"></canvas>
 				<div id="EditorEsquinas">
 					<canvas id="canvasOriginal" width="1000" height="625"></canvas>
+					<canvas id="canvasMiniatura" width="1000" height="625" title="Vista previa de la imagen enderezada"></canvas>
 					<svg id="MarcoEsquinas" viewBox="0 0 1000 625">
 						<polygon id="PoligonoEsquinas" points="0,0"></polygon>
 						<circle class="esquina" data-indice="0" r="18"></circle>

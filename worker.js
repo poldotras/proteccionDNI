@@ -314,6 +314,8 @@ function CodigoWorker() {
 		// centrado donde está la tarjeta pero sin salirse de la imagen
 		let wDest = (Distancia(tl, tr) + Distancia(bl, br)) / 2;
 		wDest = Math.min(wDest, w * 0.98, h * ProporcionCanvas * 0.98);
+		if (wDest < 10)
+			return null;
 		const hDest = wDest / ProporcionCanvas;
 
 		let cx = (tl.x + tr.x + br.x + bl.x) / 4;
@@ -424,28 +426,30 @@ function CodigoWorker() {
 		return canvasEscalado;
 	}
 
-	self.addEventListener('message', e => {
-		const img = e.data.bitmap;
+	// Imagen en escala de grises de la última foto procesada, para poder enderezarla
+	// de nuevo cada vez que se ajusten las esquinas sin reprocesarlo todo
+	let imagenGris = null;
 
-		const canvas = ReducirAnchura(PonerHorizontal(img));
+	/**
+	* Procesar una foto nueva: girar si está en vertical, pasar a blanco y negro
+	* y detectar las esquinas del DNI. No endereza; eso se pide en un mensaje aparte.
+	*/
+	function ProcesarImagenNueva(datos) {
+		const canvas = ReducirAnchura(PonerHorizontal(datos.bitmap));
 		const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
+		imagenGris = null;
+		let esquinas = null;
 		let tarjeta = null;
 		try {
-			let imgPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			const imgPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
 			ConvertirBN(imgPixels);
+			imagenGris = imgPixels;
 
 			const deteccion = DetectarTarjeta(imgPixels);
 			if (deteccion) {
 				tarjeta = deteccion.tarjeta;
-				// si la tarjeta está torcida, enderezarla con corrección de perspectiva
-				if (deteccion.esquinas) {
-					const enderezado = EnderezarTarjeta(imgPixels, deteccion.esquinas);
-					if (enderezado) {
-						imgPixels = enderezado.imgPixels;
-						tarjeta = enderezado.tarjeta;
-					}
-				}
+				esquinas = deteccion.esquinas || null;
 			}
 
 			ctx.putImageData(imgPixels, 0, 0);
@@ -454,7 +458,35 @@ function CodigoWorker() {
 		}
 
 		const bitmap = canvas.transferToImageBitmap();
-		self.postMessage({ bitmap, tarjeta });
+		self.postMessage({ id: datos.id, bitmap, esquinas, tarjeta, ancho: imagenGris ? imagenGris.width : canvas.width, alto: imagenGris ? imagenGris.height : canvas.height });
+	}
+
+	/**
+	* Enderezar la última foto procesada usando las esquinas indicadas
+	*/
+	function ProcesarEnderezado(datos) {
+		if (!imagenGris) {
+			self.postMessage({ id: datos.id, bitmap: null });
+			return;
+		}
+
+		const enderezado = EnderezarTarjeta(imagenGris, datos.esquinas);
+		if (!enderezado) {
+			self.postMessage({ id: datos.id, bitmap: null });
+			return;
+		}
+
+		const canvas = new OffscreenCanvas(imagenGris.width, imagenGris.height);
+		canvas.getContext('2d').putImageData(enderezado.imgPixels, 0, 0);
+		const bitmap = canvas.transferToImageBitmap();
+		self.postMessage({ id: datos.id, bitmap, tarjeta: enderezado.tarjeta });
+	}
+
+	self.addEventListener('message', e => {
+		if (e.data.bitmap)
+			ProcesarImagenNueva(e.data);
+		else if (e.data.esquinas)
+			ProcesarEnderezado(e.data);
 	});
 }
 

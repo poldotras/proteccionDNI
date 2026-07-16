@@ -41,6 +41,9 @@ function CambiarImagenTest(ev) {
 		ctxImagen.drawImage(img, 0, 0);
 
 		imagenDNI_BN = canvasTmp.transferToImageBitmap();
+		imagenOriginalBN = imagenDNI_BN;
+		esquinasDNI = EsquinasPorDefecto();
+		DibujarEditorEsquinas();
 
 		RedibujarDNI();
 		activarWizard(document.getElementById('step2'));

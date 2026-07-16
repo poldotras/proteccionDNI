@@ -54,7 +54,19 @@ canvaComposicion.width = canvas.width;
 canvaComposicion.height = canvas.height;
 
 // Contiene la imagen del DNI elegida por el usuario a escala 1:1 y en blanco y negro, antes de girar, desplazar...
+// Si se ha aplicado la corrección de perspectiva, contiene ya la imagen enderezada
 let imagenDNI_BN = null;
+
+// Imagen original en blanco y negro sin enderezar, la que se muestra en el editor de esquinas
+let imagenOriginalBN = null;
+
+// Las 4 esquinas del DNI sobre la imagen original, en orden: sup-izda, sup-dcha, inf-dcha, inf-izda
+let esquinasDNI = null;
+
+const EditorEsquinas = document.getElementById('EditorEsquinas');
+const canvasOriginal = document.getElementById('canvasOriginal');
+const MarcoEsquinas = document.getElementById('MarcoEsquinas');
+const PoligonoEsquinas = document.getElementById('PoligonoEsquinas');
 
 const SelectorFichero = document.getElementById('SelectorFichero');
 const Formato = document.getElementById('Formato');
@@ -136,6 +148,8 @@ botonGrabar.disabled = true;
 
 configurarDobleClickComoReset('#ControlesDesplazamiento');
 configurarGiro();
+configurarEditorEsquinas();
+configurarVistasPosicion();
 
 AsignarWatermarkPorDefecto(Watermark);
 
@@ -354,6 +368,7 @@ function activarWizard(step) {
 	document.body.classList.remove('EnPaso' + pasoActual);
 	pasoActual = paso;
 	document.body.classList.add('EnPaso' + pasoActual);
+	AjustarVistaPosicion();
 
 	let siguiente = step;
 	while (siguiente) {
@@ -383,7 +398,7 @@ function activarElementoWizard(paso) {
 			break;
 
 		case '3':
-			Zoom.focus();
+			document.getElementById('BtnVistaOriginal').focus();
 			break;
 
 		case '4':
@@ -461,6 +476,7 @@ function MostrarImagen(file) {
 
 		CambiarEstadoBoton('4', false);
 		posicionAutomatica = null;
+		CambiarVistaPosicion(true);
 		ResetearControles();
 		AjustarVisibilidadResetear();
 
@@ -485,33 +501,105 @@ function MostrarImagen(file) {
 	img.src = URL.createObjectURL(file);
 }
 
-/**
-Tomamos la imagen original del DNI y la preparamos a blanco y negro.
-Deveuelve una promesa
-*/
-function PrepararDNI(img) {
-	return new Promise((resolve, reject) => {
+// Comunicación con el worker: cada petición lleva un id y devuelve una promesa con su respuesta
+let idMensajeWorker = 0;
+const respuestasWorker = new Map();
+let workerEscuchado = null;
+
+function EnviarAlWorker(mensaje) {
+	return new Promise(function (resolve, reject) {
 		if (!procesadorDNI) {
 			reject('No existe el objeto procesadorDNI');
 			return;
 		}
 
-		function handler(e) {
-			imagenDNI_BN = e.data.bitmap;
-
-			AjustarPosicionAutomatica(e.data.tarjeta);
-
-			resolve();
+		// el worker se puede crear en diferido al usar file:, así que nos suscribimos al hacer la primera petición
+		if (workerEscuchado != procesadorDNI) {
+			procesadorDNI.addEventListener('message', function (e) {
+				const resolver = respuestasWorker.get(e.data.id);
+				respuestasWorker.delete(e.data.id);
+				if (resolver)
+					resolver(e.data);
+			});
+			workerEscuchado = procesadorDNI;
 		}
 
-		procesadorDNI.addEventListener('message', handler, { once: true });
-
-		// creamos un objeto transferable que podamos enviar al WebWorker
-		createImageBitmap(img)
-			.then(bitmap => {
-				procesadorDNI.postMessage({ bitmap });
-			});
+		const id = ++idMensajeWorker;
+		respuestasWorker.set(id, resolve);
+		mensaje.id = id;
+		procesadorDNI.postMessage(mensaje);
 	});
+}
+
+/**
+Tomamos la imagen original del DNI y la preparamos a blanco y negro,
+detectando las esquinas de la tarjeta y enderezándola si es posible.
+Deveuelve una promesa
+*/
+function PrepararDNI(img) {
+	// creamos un objeto transferable que podamos enviar al WebWorker
+	return createImageBitmap(img)
+		.then(bitmap => EnviarAlWorker({ bitmap }))
+		.then(function (respuesta) {
+			imagenOriginalBN = respuesta.bitmap;
+			imagenDNI_BN = respuesta.bitmap;
+
+			if (respuesta.esquinas)
+				esquinasDNI = respuesta.esquinas;
+			else if (respuesta.tarjeta)
+				esquinasDNI = RectanguloAEsquinas(respuesta.tarjeta);
+			else
+				esquinasDNI = EsquinasPorDefecto();
+
+			DibujarEditorEsquinas();
+
+			// si la detección de esquinas es fiable, enderezar la tarjeta directamente
+			if (respuesta.esquinas)
+				return AplicarEsquinas();
+
+			AjustarPosicionAutomatica(respuesta.tarjeta);
+		});
+}
+
+/**
+Pide al worker enderezar la imagen con las esquinas actuales y actualiza la previsualización
+*/
+function AplicarEsquinas() {
+	return EnviarAlWorker({ esquinas: esquinasDNI })
+		.then(function (respuesta) {
+			// el worker devuelve null si las esquinas no permiten calcular la transformación
+			if (!respuesta.bitmap)
+				return;
+
+			imagenDNI_BN = respuesta.bitmap;
+			AjustarPosicionAutomatica(respuesta.tarjeta);
+			RedibujarDNI();
+		});
+}
+
+// Control para no acumular peticiones de enderezado mientras se arrastran las esquinas
+let enderezadoEnCurso = false;
+let enderezadoPendiente = false;
+
+function SolicitarEnderezado() {
+	if (!esquinasDNI || !EsConvexo(esquinasDNI))
+		return;
+
+	if (enderezadoEnCurso) {
+		enderezadoPendiente = true;
+		return;
+	}
+
+	enderezadoEnCurso = true;
+	AplicarEsquinas()
+		.catch(error => console.error(error))
+		.finally(function () {
+			enderezadoEnCurso = false;
+			if (enderezadoPendiente) {
+				enderezadoPendiente = false;
+				SolicitarEnderezado();
+			}
+		});
 }
 
 /**
@@ -623,6 +711,163 @@ function AsignarValorAmpliandoRango(input, valor) {
 		input.max = valor + holgura;
 
 	input.value = valor;
+}
+
+//////////////////////////////////////
+//
+// Editor de esquinas del paso Posición
+//
+//////////////////////////////////////
+
+function RectanguloAEsquinas(rect) {
+	return [
+		{ x: rect.x, y: rect.y },
+		{ x: rect.x + rect.w, y: rect.y },
+		{ x: rect.x + rect.w, y: rect.y + rect.h },
+		{ x: rect.x, y: rect.y + rect.h },
+	];
+}
+
+function EsquinasPorDefecto() {
+	const w = imagenOriginalBN.width;
+	const h = imagenOriginalBN.height;
+	return RectanguloAEsquinas({ x: w * 0.05, y: h * 0.05, w: w * 0.9, h: h * 0.9 });
+}
+
+/**
+Comprueba que las 4 esquinas forman un cuadrilátero convexo en el orden esperado (sentido horario)
+*/
+function EsConvexo(esquinas) {
+	for (let i = 0; i < 4; i++) {
+		const a = esquinas[i];
+		const b = esquinas[(i + 1) % 4];
+		const c = esquinas[(i + 2) % 4];
+		if ((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x) <= 0)
+			return false;
+	}
+	return true;
+}
+
+// escala y desplazamiento con los que se muestra la imagen original dentro del editor de esquinas
+let transformacionEditor = { escala: 1, x: 0, y: 0 };
+
+/**
+Dibujar la imagen original en el editor y colocar el marco con las 4 esquinas
+*/
+function DibujarEditorEsquinas() {
+	if (!imagenOriginalBN || !esquinasDNI)
+		return;
+
+	const ctx = canvasOriginal.getContext('2d', { alpha: false });
+	ctx.fillStyle = 'white';
+	ctx.fillRect(0, 0, canvasOriginal.width, canvasOriginal.height);
+
+	const escala = Math.min(canvasOriginal.width / imagenOriginalBN.width, canvasOriginal.height / imagenOriginalBN.height);
+	transformacionEditor = {
+		escala,
+		x: (canvasOriginal.width - imagenOriginalBN.width * escala) / 2,
+		y: (canvasOriginal.height - imagenOriginalBN.height * escala) / 2,
+	};
+	ctx.drawImage(imagenOriginalBN, transformacionEditor.x, transformacionEditor.y, imagenOriginalBN.width * escala, imagenOriginalBN.height * escala);
+
+	ActualizarMarcoEsquinas();
+}
+
+function EsquinaAEditor(punto) {
+	return {
+		x: transformacionEditor.x + punto.x * transformacionEditor.escala,
+		y: transformacionEditor.y + punto.y * transformacionEditor.escala,
+	};
+}
+
+/**
+Actualizar el polígono y los puntos arrastrables con la posición actual de las esquinas
+*/
+function ActualizarMarcoEsquinas() {
+	const puntos = esquinasDNI.map(EsquinaAEditor);
+	PoligonoEsquinas.setAttribute('points', puntos.map(p => p.x + ',' + p.y).join(' '));
+	PoligonoEsquinas.classList.toggle('invalido', !EsConvexo(esquinasDNI));
+
+	// se posicionan tanto los círculos visibles como sus zonas de toque ampliadas
+	querySelector_Array('.esquina', MarcoEsquinas)
+		.forEach(function (circulo) {
+			const punto = puntos[circulo.dataset.indice];
+			circulo.setAttribute('cx', punto.x);
+			circulo.setAttribute('cy', punto.y);
+		});
+}
+
+/**
+Permitir arrastrar las 4 esquinas con ratón o dedo; al soltar se endereza la imagen
+*/
+function configurarEditorEsquinas() {
+	let indiceArrastre = null;
+
+	MarcoEsquinas.addEventListener('pointerdown', function (ev) {
+		const esquina = ev.target.closest('.esquina');
+		if (!esquina || !esquinasDNI)
+			return;
+
+		indiceArrastre = parseInt(esquina.dataset.indice, 10);
+		MarcoEsquinas.setPointerCapture(ev.pointerId);
+		ev.stopPropagation();
+		ev.preventDefault();
+	});
+
+	MarcoEsquinas.addEventListener('pointermove', function (ev) {
+		if (indiceArrastre == null)
+			return;
+
+		// pasar de coordenadas de pantalla a coordenadas de la imagen original
+		const bb = MarcoEsquinas.getBoundingClientRect();
+		const x = (ev.clientX - bb.left) * canvasOriginal.width / bb.width;
+		const y = (ev.clientY - bb.top) * canvasOriginal.height / bb.height;
+
+		esquinasDNI[indiceArrastre] = {
+			x: Math.min(Math.max((x - transformacionEditor.x) / transformacionEditor.escala, 0), imagenOriginalBN.width),
+			y: Math.min(Math.max((y - transformacionEditor.y) / transformacionEditor.escala, 0), imagenOriginalBN.height),
+		};
+		ActualizarMarcoEsquinas();
+		ev.stopPropagation();
+	});
+
+	function soltar(ev) {
+		if (indiceArrastre == null)
+			return;
+
+		indiceArrastre = null;
+		SolicitarEnderezado();
+		ev.stopPropagation();
+	}
+	MarcoEsquinas.addEventListener('pointerup', soltar);
+	MarcoEsquinas.addEventListener('pointercancel', soltar);
+}
+
+// En el paso de posición se puede alternar entre la foto original con las esquinas y el resultado enderezado
+let vistaOriginal = true;
+
+function configurarVistasPosicion() {
+	document.getElementById('BtnVistaOriginal')
+		.addEventListener('click', () => CambiarVistaPosicion(true));
+	document.getElementById('BtnVistaEnderezada')
+		.addEventListener('click', () => CambiarVistaPosicion(false));
+}
+
+function CambiarVistaPosicion(original) {
+	vistaOriginal = original;
+	document.getElementById('BtnVistaOriginal').classList.toggle('seleccionada', original);
+	document.getElementById('BtnVistaEnderezada').classList.toggle('seleccionada', !original);
+	AjustarVistaPosicion();
+
+	if (original)
+		DibujarEditorEsquinas();
+}
+
+/**
+El editor de esquinas solo se muestra dentro del paso de posición con la vista Original elegida
+*/
+function AjustarVistaPosicion() {
+	document.body.classList.toggle('EnVistaOriginal', vistaOriginal && pasoActual == '3');
 }
 
 /**
@@ -1089,6 +1334,10 @@ function initGestures() {
 function pointerdownHandler(ev) {
 	// mover/ ajustar la imagen solo en los pasos de posición y tipo
 	if (pasoActual != '3' && pasoActual != '4')
+		return;
+
+	// en la vista original los toques son para el editor de esquinas
+	if (document.body.classList.contains('EnVistaOriginal'))
 		return;
 
 	// The pointerdown event signals the start of a touch interaction.

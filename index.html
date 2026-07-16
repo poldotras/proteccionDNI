@@ -106,7 +106,11 @@
 			<details id="paso3" name="paso">
 				<summary>Posición</summary>
 				<div>
-					<p>La página intenta encuadrar y enderezar el DNI automáticamente; ajusta la orientación y posición si es necesario para que se vea correctamente.</p>
+					<p>Coloca los 4 puntos sobre las esquinas del DNI en la vista Original; en la vista Enderezada verás el resultado recto y podrás afinarlo.</p>
+					<div id="VistasPosicion">
+						<button class="btn seleccionada" type="button" id="BtnVistaOriginal"><span>Original</span></button>
+						<button class="btn" type="button" id="BtnVistaEnderezada"><span>Enderezada</span></button>
+					</div>
 					<div id="ControlesDesplazamiento">
 						<div class="ContenedorControl"><label for="Zoom">Acercar</label> <input type="range" min="0.8" max="3" id="Zoom" value="1" step="any"></div>
 						<div class="ContenedorControl"><label for="Rotacion">Rotar</label> <input type="range" min="-10" max="10" id="Rotacion" value="0" step="any"></div>
@@ -147,6 +151,20 @@
 			</details>
 			<div id="Previsualizacion">
 				<canvas id="canvas" width="1000" height="625"></canvas>
+				<div id="EditorEsquinas">
+					<canvas id="canvasOriginal" width="1000" height="625"></canvas>
+					<svg id="MarcoEsquinas" viewBox="0 0 1000 625">
+						<polygon id="PoligonoEsquinas" points="0,0"></polygon>
+						<circle class="esquina" data-indice="0" r="18"></circle>
+						<circle class="esquina" data-indice="1" r="18"></circle>
+						<circle class="esquina" data-indice="2" r="18"></circle>
+						<circle class="esquina" data-indice="3" r="18"></circle>
+						<circle class="esquina ZonaToque" data-indice="0" r="50"></circle>
+						<circle class="esquina ZonaToque" data-indice="1" r="50"></circle>
+						<circle class="esquina ZonaToque" data-indice="2" r="50"></circle>
+						<circle class="esquina ZonaToque" data-indice="3" r="50"></circle>
+					</svg>
+				</div>
 				<div id="ControlesPosicion" class="ControlesSuperpuestos">
 					<div class="BloqueBotones">
 						<button type="button" class="IconoAccion girar" title="Girar a Izquierda" data-giro="-90"><svg viewBox="0 0 24 24"><path d="M13 4.07V1L8.45 5.55 13 10V6.09a6 6 0 0 1 0 11.82v2.02a7.99 7.99 0 0 0 0-15.86M7.1 18.32a7.92 7.92 0 0 0 3.9 1.61V17.9a5.91 5.91 0 0 1-2.46-1.03L7.1 18.32M6.09 13H4.07a7.9 7.9 0 0 0 1.62 3.89l1.41-1.42A6 6 0 0 1 6.09 13m1.02-4.47L5.7 7.11A7.92 7.92 0 0 0 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47Z" /></svg></button>

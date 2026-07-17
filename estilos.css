@@ -514,3 +514,10 @@ a[href^='#'] {
 	background: #FFF;
 	z-index: 2;
 }
+
+/* botones de girar la imagen original 90º */
+#ControlesOriginal {
+	left: 0;
+	display: flex;
+	gap: 3px;
+}

@@ -84,9 +84,6 @@ const DivValidez = document.getElementById('DivValidez');
 
 let nombreFichero = '';
 
-// Ángulo de rotación del DNI (0, 90, 180, 270)
-let rotacion = 0;
-
 // Rellenar la lista de formatos de DNI automáticamente
 const opciones = [];
 for (const [key, value] of Object.entries(FormatosDnis)) {
@@ -296,16 +293,30 @@ function configurarGiro() {
 }
 
 function girarDNI(ev) {
-	const boton = ev.currentTarget;
-	const giro = parseInt(boton.dataset.giro, 10);
-	rotacion += giro;
-	if (rotacion >= 360)
-		rotacion -= 360;
-	if (rotacion < 0)
-		rotacion += 360;
+	const giro = parseInt(ev.currentTarget.dataset.giro, 10);
 
-	RedibujarDNI();
-	AjustarVisibilidadResetear();
+	EnviarAlWorker({ girar: giro })
+		.then(function (respuesta) {
+			if (!respuesta.bitmap)
+				return;
+
+			const anchoPrevio = imagenOriginalBN.width;
+			const altoPrevio = imagenOriginalBN.height;
+			imagenOriginalBN = respuesta.bitmap;
+
+			// girar también las esquinas, desplazando su orden para que
+			// el punto 0 siga siendo el de arriba a la izquierda
+			const giradas = esquinasDNI.map(p => giro > 0
+				? { x: altoPrevio - p.y, y: p.x }
+				: { x: p.y, y: anchoPrevio - p.x });
+			esquinasDNI = giro > 0
+				? [giradas[3], giradas[0], giradas[1], giradas[2]]
+				: [giradas[1], giradas[2], giradas[3], giradas[0]];
+
+			DibujarEditorEsquinas();
+			SolicitarEnderezado();
+		})
+		.catch(error => console.error(error));
 }
 
 /** 
@@ -781,15 +792,13 @@ function ValorInicial(control) {
 Vuelve a poner los controles de posición y rotación con los valores iniciales
 */
 function ResetearControles() {
-	rotacion = 0;
-
 	[Rotacion, Horizontal, Vertical, Zoom].forEach(function (control) {
 		control.value = ValorInicial(control);
 	});
 }
 
 function AjustarVisibilidadResetear() {
-	const Movido = rotacion != 0 || [Rotacion, Horizontal, Vertical, Zoom]
+	const Movido = [Rotacion, Horizontal, Vertical, Zoom]
 		.some((control) => control.value != ValorInicial(control));
 
 	Resetear.style.display = Movido ? '' : 'none';
@@ -817,33 +826,6 @@ function RedibujarEnDNIEnRAF() {
 	redibujoDNIpendiente = false;
 
 	let canvasOrigen = imagenDNI_BN;
-	// rotar ángulos rectos
-	if (rotacion != 0) {
-		const ancho = rotacion == 180 ? canvasOrigen.width : canvasOrigen.height;
-		const alto = rotacion == 180 ? canvasOrigen.height : canvasOrigen.width;
-		const canvasGiro = new OffscreenCanvas(ancho, alto);
-
-		const ctxRotado = canvasGiro.getContext('2d');
-		ctxRotado.clearRect(0, 0, ancho, alto);
-		// save the unrotated context of the canvas so we can restore it later
-		// the alternative is to untranslate & unrotate after drawing
-		ctxRotado.save();
-
-		// move to the center of the canvas
-		ctxRotado.translate(ancho / 2, alto / 2);
-
-		// rotate the canvas to the specified degrees
-		ctxRotado.rotate(rotacion * Math.PI / 180);
-
-		// draw the image
-		// since the context is rotated, the image will be rotated also
-		ctxRotado.drawImage(canvasOrigen, - canvasOrigen.width / 2, - canvasOrigen.height / 2);
-
-		// we’re done with the rotating so restore the unrotated context
-		ctxRotado.restore();
-
-		canvasOrigen = canvasGiro;
-	}
 
 	// pequeños ajustes de ángulo
 	const degrees = Rotacion.value;

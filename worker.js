@@ -620,11 +620,46 @@ function CodigoWorker() {
 		self.postMessage({ id: datos.id, bitmap, tarjeta: enderezado.tarjeta });
 	}
 
+	/**
+	* Girar 90º la imagen guardada y devolverla, para cuando la foto está en la orientación equivocada
+	*/
+	function ProcesarGiro(datos) {
+		if (!imagenGris) {
+			self.postMessage({ id: datos.id, bitmap: null });
+			return;
+		}
+
+		const w = imagenGris.width;
+		const h = imagenGris.height;
+		const origen = imagenGris.data;
+		const salida = new ImageData(h, w);
+		const destino = salida.data;
+
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				const xd = datos.girar > 0 ? h - 1 - y : y;
+				const yd = datos.girar > 0 ? x : w - 1 - x;
+				const i = (y * w + x) * 4;
+				const j = (yd * h + xd) * 4;
+				destino[j] = destino[j + 1] = destino[j + 2] = origen[i];
+				destino[j + 3] = 255;
+			}
+		}
+
+		imagenGris = salida;
+
+		const canvas = new OffscreenCanvas(salida.width, salida.height);
+		canvas.getContext('2d').putImageData(salida, 0, 0);
+		self.postMessage({ id: datos.id, bitmap: canvas.transferToImageBitmap() });
+	}
+
 	self.addEventListener('message', e => {
 		if (e.data.bitmap)
 			ProcesarImagenNueva(e.data);
 		else if (e.data.esquinas)
 			ProcesarEnderezado(e.data);
+		else if (e.data.girar)
+			ProcesarGiro(e.data);
 	});
 }
 

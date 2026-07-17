@@ -88,6 +88,17 @@ function ZonaPorDefecto() {
 	};
 }
 
+/**
+Rectángulos que se censuran en negro con el formato y las opciones actuales
+*/
+function BloquesCensurados() {
+	const DatosFormato = FormatosDnis[Formato.value];
+	const bloques = DatosFormato.Mascaras.slice();
+	if (Validez.checked && DatosFormato.DatosValidez)
+		bloques.push(...DatosFormato.DatosValidez);
+	return bloques;
+}
+
 /** Ocultar las partes de la imagen que no hacen ninguna falta, dependerá del formato de DNI y el lado */
 function DibujarMascara() {
 	function DibujarRectangulo(bloque) {
@@ -100,10 +111,7 @@ function DibujarMascara() {
 	const ctx = canvasMascara.getContext('2d');
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillStyle = 'black';
-	DatosFormato.Mascaras.forEach(DibujarRectangulo);
-
-	if (Validez.checked)
-		DatosFormato.DatosValidez.forEach(DibujarRectangulo);
+	BloquesCensurados().forEach(DibujarRectangulo);
 
 	if (EnmascararDni.checked && DatosFormato.MascarasDni) {
 		const bloquesDni = DatosFormato.MascarasDni;
@@ -127,7 +135,10 @@ function DibujarMascara() {
 const AnguloAleatorio = Math.round(Math.random() * 180) - 90;
 
 /**
-Sobre escribir texto en las zonas que se definan para el formato elegido
+Sobre escribir texto en las zonas que se definan para el formato elegido.
+La marca debe verse también por encima de los campos censurados en negro,
+así que se repite en blanco recortada a esos rectángulos, con la misma
+onda y ángulo para que las líneas tengan continuidad
 */
 function DibujarMarcaAgua() {
 	const ctx = canvasWatermark.getContext('2d');
@@ -137,10 +148,31 @@ function DibujarMarcaAgua() {
 	if (!texto)
 		return;
 
+	DibujarMarcas(ctx, texto);
+
+	const bloques = BloquesCensurados();
+	if (!bloques.length)
+		return;
+
+	ctx.save();
+	ctx.beginPath();
+	bloques.forEach(bloque => ctx.roundRect(bloque.x, bloque.y, bloque.w, bloque.h, 5));
+	ctx.clip();
+	// dentro de los rectángulos solo queda el texto en blanco
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	DibujarMarcas(ctx, texto, 'rgb(255 255 255 / 40%)');
+	ctx.restore();
+}
+
+/**
+Escribir las marcas de agua del formato actual, con un estilo opcional que
+sustituye al del formato
+*/
+function DibujarMarcas(ctx, texto, estilo) {
 	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
 		const textoMarca = marca.mayusculas ? texto.toUpperCase() : texto;
 		const angulo = marca.angulo == 'aleatorio' ? AnguloAleatorio : marca.angulo;
-		RellenarTexto(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h, angulo);
+		RellenarTexto(textoMarca, ctx, marca.fuente, estilo || marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h, angulo);
 	});
 }
 

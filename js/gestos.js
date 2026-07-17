@@ -5,6 +5,11 @@ https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events/Pinch_zoom_gestu
 */
 'use strict';
 
+// límites de los ajustes manuales por gestos
+const ZoomMinimo = 0.2;
+const ZoomMaximo = 10;
+const RotacionMaxima = 10;
+
 // punteros activos, para poder detectar gestos de dos dedos
 const evCache = [];
 
@@ -48,6 +53,18 @@ function CalcularAngulo() {
 	return Math.atan2(dy, dx) * (180 / Math.PI);
 }
 
+function Limitar(valor, min, max) {
+	return Math.min(max, Math.max(min, valor));
+}
+
+/**
+Redibujar el resultado con los ajustes modificados por el gesto
+*/
+function AplicarGesto() {
+	RedibujarDNI();
+	AjustarVisibilidadResetear();
+}
+
 function pointerdownHandler(ev) {
 	evCache.push(ev);
 
@@ -55,8 +72,8 @@ function pointerdownHandler(ev) {
 		// registrar datos iniciales para cambio de zoom y rotación
 		distanciaInicial = CalcularDistancia();
 		anguloInicial = CalcularAngulo();
-		rotacionInicial = Rotacion.valueAsNumber;
-		zoomInicial = Zoom.valueAsNumber;
+		rotacionInicial = ajustesResultado.rotacion;
+		zoomInicial = ajustesResultado.zoom;
 	}
 	if (evCache.length == 1)
 		registrarUnPunto(ev);
@@ -68,8 +85,8 @@ function registrarUnPunto(ev) {
 		y: ev.clientY,
 	}
 	desplazamientoInicial = {
-		x: Horizontal.valueAsNumber,
-		y: Vertical.valueAsNumber,
+		x: ajustesResultado.horizontal,
+		y: ajustesResultado.vertical,
 	};
 	escalaImagen = canvas.width / canvas.getBoundingClientRect().width;
 }
@@ -82,16 +99,20 @@ function pointermoveHandler(ev) {
 	// con dos dedos, pellizco para zoom y giro para rotación fina
 	if (evCache.length === 2) {
 		const cambioDistancia = CalcularDistancia() - distanciaInicial;
-		ActualizarValorInput(Zoom, zoomInicial + cambioDistancia * 0.01);
+		ajustesResultado.zoom = Limitar(zoomInicial + cambioDistancia * 0.01, ZoomMinimo, ZoomMaximo);
 
 		const cambioRotacion = CalcularAngulo() - anguloInicial;
-		ActualizarValorInput(Rotacion, rotacionInicial + cambioRotacion);
+		ajustesResultado.rotacion = Limitar(rotacionInicial + cambioRotacion, -RotacionMaxima, RotacionMaxima);
+
+		AplicarGesto();
 	}
 
 	// con un dedo, desplazamiento horizontal/vertical
 	if (evCache.length == 1) {
-		ActualizarValorInput(Horizontal, desplazamientoInicial.x + escalaImagen * (ev.clientX - puntoInicial.x));
-		ActualizarValorInput(Vertical, desplazamientoInicial.y + escalaImagen * (ev.clientY - puntoInicial.y));
+		ajustesResultado.horizontal = desplazamientoInicial.x + escalaImagen * (ev.clientX - puntoInicial.x);
+		ajustesResultado.vertical = desplazamientoInicial.y + escalaImagen * (ev.clientY - puntoInicial.y);
+
+		AplicarGesto();
 	}
 }
 

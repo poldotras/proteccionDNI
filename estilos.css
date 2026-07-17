@@ -342,26 +342,16 @@ footer {
 	fill: currentColor;
 }
 
-.ControlesSuperpuestos {
+/* botón para deshacer los ajustes manuales, superpuesto al resultado */
+#Resetear {
 	position: absolute;
-	top: 0;
-	background: rgba(0 0 0 /.5);
-	padding: 5px;
+	top: 5px;
+	left: 5px;
 	z-index: 1;
-}
-
-#ControlesPosicion {
-	left: 0;
-	display: none;
-	gap: 5px;
 }
 
 .Editando #Previsualizacion {
 	touch-action: none;
-}
-
-.Editando #ControlesPosicion {
-	display: flex;
 }
 
 /* mostrar un indicador en los enlaces que abrir�n nueva ventana */

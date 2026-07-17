@@ -70,12 +70,6 @@
 					<div id="DivValidez" class="CampoCheckbox Oculto"><label for="Validez">Ocultar Fecha de Nacimiento, Validez y Nº Soporte</label> <span><input type="checkbox" id="Validez"> <a href="#OcultarNumeroSoporte" id="AyudaOcultarNumeroSoporte" class="AbrirInfo">¿qué es esto?</a></span></div>
 					<div id="DivMascaraDni" class="CampoCheckbox Oculto"><label for="EnmascararDni">Ocultar parcialmente el DNI</label> <span><input type="checkbox" id="EnmascararDni"> <a href="#OcultarParcialmente" id="AyudaOcultarParcialmente" class="AbrirInfo">¿qué es esto?</a></span></div>
 					<div class="ContenedorControl"><label for="Watermark">Sobreescribir: </label> <input type="text" id="Watermark" value="Copia para …"></div>
-					<div id="ControlesDesplazamiento" class="Oculto">
-						<div class="ContenedorControl"><label for="Zoom">Acercar</label> <input type="range" min="0.8" max="3" id="Zoom" value="1" step="any"></div>
-						<div class="ContenedorControl"><label for="Rotacion">Rotar</label> <input type="range" min="-10" max="10" id="Rotacion" value="0" step="any"></div>
-						<div class="ContenedorControl"><label for="Horizontal">Desp. Horizontal</label> <input type="range" min="-500" max="500" id="Horizontal" value="0"></div>
-						<div class="ContenedorControl"><label for="Vertical">Desp. Vertical</label> <input type="range" min="-500" max="500" id="Vertical" value="0"></div>
-					</div>
 				</div>
 				<div id="Vistas">
 					<div id="PanelOriginal">
@@ -104,9 +98,7 @@
 						<div class="TituloVista">Copia protegida</div>
 						<div id="Previsualizacion">
 							<canvas id="canvas" width="1000" height="625"></canvas>
-							<div id="ControlesPosicion" class="ControlesSuperpuestos">
-								<button type="button" id="Resetear" class="IconoAccion" title="Deshacer cambios de tamaño y posición"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" /></svg></button>
-							</div>
+							<button type="button" id="Resetear" class="IconoAccion" title="Deshacer cambios de tamaño y posición"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" /></svg></button>
 						</div>
 					</div>
 				</div>

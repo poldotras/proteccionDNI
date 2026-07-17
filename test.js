@@ -21,7 +21,7 @@ function CambiarImagenTest(ev) {
 
 	ActivarModoEdicion();
 	posicionAutomatica = null;
-	ResetearControles();
+	ResetearAjustes();
 
 	// si el nombre coincide con el de un formato, seleccionarlo automáticamente
 	const match = /ejemplos\/(.*)\.webp/.exec(img.src);

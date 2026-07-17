@@ -42,7 +42,7 @@ function RedibujarDNIEnRAF() {
 	let canvasOrigen = imagenDNI_BN;
 
 	// pequeños ajustes de ángulo
-	const grados = Rotacion.value;
+	const grados = ajustesResultado.rotacion;
 	if (grados != 0) {
 		const canvasAjusteAngulo = new OffscreenCanvas(canvasOrigen.width, canvasOrigen.height);
 
@@ -64,8 +64,9 @@ function RedibujarDNIEnRAF() {
 	ctx.fill();
 
 	// volcar Imagen DNI escalada y con desplazamiento
+	const anchoEscalado = canvas.width * ajustesResultado.zoom;
 	const aspectRatio = canvasOrigen.height / canvasOrigen.width;
-	ctx.drawImage(canvasOrigen, Horizontal.value, Vertical.value, canvas.width * Zoom.value, canvas.width * Zoom.value * aspectRatio);
+	ctx.drawImage(canvasOrigen, ajustesResultado.horizontal, ajustesResultado.vertical, anchoEscalado, anchoEscalado * aspectRatio);
 }
 
 /** Ocultar las partes de la imagen que no hacen ninguna falta, dependerá del formato de DNI y el lado */

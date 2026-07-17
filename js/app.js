@@ -42,7 +42,7 @@ function MostrarImagen(file) {
 
 		ActivarModoEdicion();
 		posicionAutomatica = null;
-		ResetearControles();
+		ResetearAjustes();
 		AjustarVisibilidadResetear();
 
 		PrepararDNI(img)
@@ -186,19 +186,12 @@ document.getElementById('ZonaElegir')
 	});
 });
 
-[Rotacion, Horizontal, Vertical, Zoom].forEach(function (control) {
-	control.addEventListener('input', function () {
-		RedibujarDNI();
-		AjustarVisibilidadResetear();
-	});
-});
-
 Watermark.addEventListener('input', () => DibujarMarcaAgua());
 
 botonGrabar.addEventListener('click', GrabarImagen);
 
 activarClickConTeclado(Resetear, () => {
-	ResetearControles();
+	ResetearAjustes();
 	RedibujarDNI();
 	AjustarVisibilidadResetear();
 });

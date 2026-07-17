@@ -38,13 +38,6 @@ const DivValidez = document.getElementById('DivValidez');
 const botonGrabar = document.getElementById('Guardar');
 const Resetear = document.getElementById('Resetear');
 
-// controles ocultos que guardan los ajustes de posición del resultado;
-// se modifican con los gestos táctiles y el encuadre automático
-const Rotacion = document.getElementById('Rotacion');
-const Horizontal = document.getElementById('Horizontal');
-const Vertical = document.getElementById('Vertical');
-const Zoom = document.getElementById('Zoom');
-
 //////////////////////////////////////
 //
 // Estado compartido

@@ -13,7 +13,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni4-frontal': {
@@ -43,7 +43,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni4-trasera': {
@@ -60,7 +60,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni3-frontal': {
@@ -89,7 +89,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni3-trasera': {
@@ -106,7 +106,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni1-frontal': {
@@ -129,7 +129,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni1-trasera': {
@@ -145,7 +145,7 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			angulo: -45,
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 };

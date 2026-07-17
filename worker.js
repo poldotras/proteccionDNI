@@ -596,7 +596,7 @@ function CodigoWorker() {
 		}
 
 		const bitmap = canvas.transferToImageBitmap();
-		self.postMessage({ id: datos.id, bitmap, esquinas, tarjeta, ancho: imagenGris ? imagenGris.width : canvas.width, alto: imagenGris ? imagenGris.height : canvas.height });
+		self.postMessage({ id: datos.id, bitmap, esquinas, tarjeta });
 	}
 
 	/**

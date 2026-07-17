@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 window.onerror = (a, b, c, d, e) => {
 	console.log(`Error message: ${a}`, `lineno: ${c}`, `colno: ${d}`);
@@ -7,34 +7,39 @@ window.onerror = (a, b, c, d, e) => {
 	alert(`Error inesperado: ${a}`)
 };
 
-// Global vars to cache event state
-const evCache = [];
-
-// Distancia inicial entre los dos dedos para operación de zoom con pinch
-let distanciaInicial;
-// Valor inicial de zoom para ajustarlo con pinch
-let zoomInicial;
-
-// Ángulo inicial entre los dos puntos de toque
-let anguloInicial;
-// Valor inicial de rotación para ajustarlo con rotate
-let rotacionInicial;
-
-// Punto inicial de referencia para las operaciones de panning
-let puntoInicial;
-// valores iniciales de desplazamiento al iniciar el panning
-let desplazamientoInicial;
-
-// Para las operaciones de mover la imagen necesitamos tener en cuenta la escala con la que se está mostrando en pantalla
-// internamente son 1000px, pero si estamos en móvil o en pantalla completa la anchura será distinta
-let escalaImagen;
-
-// Objeto para mantener caché de las métricas del texto sin recalcular
-const CacheMetricas = {};
+//////////////////////////////////////
+//
+// Referencias a los elementos de la página
+//
+//////////////////////////////////////
 
 const Previsualizacion = document.getElementById('Previsualizacion');
-// canvas donde dibujamos el DNI con los ajustes de rotación y desplazamiento
+// canvas donde dibujamos el DNI enderezado con los ajustes de posición
 const canvas = document.getElementById('canvas');
+
+// canvas del editor de esquinas con la imagen original y sus elementos
+const canvasOriginal = document.getElementById('canvasOriginal');
+const MarcoEsquinas = document.getElementById('MarcoEsquinas');
+const PoligonoEsquinas = document.getElementById('PoligonoEsquinas');
+const Lupa = document.getElementById('Lupa');
+
+const SelectorFichero = document.getElementById('SelectorFichero');
+const Formato = document.getElementById('Formato');
+const Watermark = document.getElementById('Watermark');
+const EnmascararDni = document.getElementById('EnmascararDni');
+const DivMascaraDni = document.getElementById('DivMascaraDni');
+const Validez = document.getElementById('Validez');
+const DivValidez = document.getElementById('DivValidez');
+const botonGrabar = document.getElementById('Guardar');
+const Resetear = document.getElementById('Resetear');
+
+// controles ocultos que guardan los ajustes de posición del resultado;
+// se modifican con los gestos táctiles y el encuadre automático
+const Rotacion = document.getElementById('Rotacion');
+const Horizontal = document.getElementById('Horizontal');
+const Vertical = document.getElementById('Vertical');
+const Zoom = document.getElementById('Zoom');
+
 // canvas con las máscaras que tapan datos
 const canvasMascara = document.createElement('canvas');
 // canvas para la superposición de texto/marca de agua
@@ -42,18 +47,20 @@ const canvasWatermark = document.createElement('canvas');
 // canvas para generar la imagen a descargar
 const canvaComposicion = document.createElement('canvas');
 
-canvasMascara.width = canvas.width;
-canvasMascara.height = canvas.height;
+[canvasMascara, canvasWatermark, canvaComposicion].forEach(function (capa) {
+	capa.width = canvas.width;
+	capa.height = canvas.height;
+});
 Previsualizacion.appendChild(canvasMascara);
-
-canvasWatermark.width = canvas.width;
-canvasWatermark.height = canvas.height;
 Previsualizacion.appendChild(canvasWatermark);
 
-canvaComposicion.width = canvas.width;
-canvaComposicion.height = canvas.height;
+//////////////////////////////////////
+//
+// Estado global
+//
+//////////////////////////////////////
 
-// Contiene la imagen del DNI elegida por el usuario a escala 1:1 y en blanco y negro, antes de girar, desplazar...
+// Imagen del DNI a escala 1:1 y en blanco y negro que se muestra como resultado.
 // Si se ha aplicado la corrección de perspectiva, contiene ya la imagen enderezada
 let imagenDNI_BN = null;
 
@@ -63,40 +70,61 @@ let imagenOriginalBN = null;
 // Las 4 esquinas del DNI sobre la imagen original, en orden: sup-izda, sup-dcha, inf-dcha, inf-izda
 let esquinasDNI = null;
 
-const EditorEsquinas = document.getElementById('EditorEsquinas');
-const canvasOriginal = document.getElementById('canvasOriginal');
-const MarcoEsquinas = document.getElementById('MarcoEsquinas');
-const PoligonoEsquinas = document.getElementById('PoligonoEsquinas');
-const Lupa = document.getElementById('Lupa');
-
-const SelectorFichero = document.getElementById('SelectorFichero');
-const Formato = document.getElementById('Formato');
-const Watermark = document.getElementById('Watermark');
-
-const Rotacion = document.getElementById('Rotacion');
-const Horizontal = document.getElementById('Horizontal');
-const Vertical = document.getElementById('Vertical');
-const Zoom = document.getElementById('Zoom');
-const EnmascararDni = document.getElementById('EnmascararDni');
-const DivMascaraDni = document.getElementById('DivMascaraDni');
-const Validez = document.getElementById('Validez');
-const DivValidez = document.getElementById('DivValidez');
-
+// Nombre del fichero elegido, para generar el nombre de la copia protegida
 let nombreFichero = '';
 
-// Rellenar la lista de formatos de DNI automáticamente
-const opciones = [];
-for (const [key, value] of Object.entries(FormatosDnis)) {
-	opciones.push(`<option value='${key}'>${value.Nombre}</option>`);
-}
-Formato.innerHTML = opciones.join('');
+// Valores de Zoom y desplazamiento calculados al encuadrar automáticamente el DNI en el recuadro
+let posicionAutomatica = null;
 
-// asignar escucha de eventos
+// Límites por defecto de los controles de posición, para restaurarlos con cada foto nueva
+const RangosPorDefecto = [Zoom, Horizontal, Vertical].map(control => ({ control, min: control.min, max: control.max }));
+
+// escala y desplazamiento con los que se muestra la imagen original dentro del editor de esquinas
+let transformacionEditor = { escala: 1, x: 0, y: 0 };
+
+// WebWorker que procesa la imagen (blanco y negro, detección de esquinas, enderezado)
+let procesadorDNI = CrearProcesador();
+
+// Comunicación con el worker: cada petición lleva un id para resolver su promesa al responder
+let idMensajeWorker = 0;
+const respuestasWorker = new Map();
+let workerEscuchado = null;
+
+// Control para no acumular peticiones de enderezado mientras se arrastran las esquinas
+let enderezadoEnCurso = false;
+let enderezadoPendiente = false;
+
+// Saber si tenemos pendiente un redibujo del DNI para no saturar la CPU/GPU
+let redibujoDNIpendiente = false;
+
+// Objeto para mantener caché de las métricas del texto sin recalcular
+const CacheMetricas = {};
+
+// Estado de los gestos táctiles (pellizco para zoom/rotación y arrastre para desplazar)
+const evCache = [];
+let distanciaInicial;
+let zoomInicial;
+let anguloInicial;
+let rotacionInicial;
+let puntoInicial;
+let desplazamientoInicial;
+// escala con la que se está mostrando el canvas en pantalla, para convertir desplazamientos
+let escalaImagen;
+
+//////////////////////////////////////
+//
+// Inicialización
+//
+//////////////////////////////////////
+
+// Rellenar la lista de formatos de DNI automáticamente
+Formato.innerHTML = Object.entries(FormatosDnis)
+	.map(([clave, formato]) => `<option value='${clave}'>${formato.Nombre}</option>`)
+	.join('');
+
 SelectorFichero.addEventListener('change', function (e) {
 	const fichero = e.target.files[0];
 	if (fichero) {
-		Previsualizacion.style.display = 'block';
-
 		MostrarImagen(fichero);
 		nombreFichero = e.target.value;
 		// borramos por si quieren volver a elegir la misma
@@ -106,14 +134,12 @@ SelectorFichero.addEventListener('change', function (e) {
 
 // botón "bonito" para el usuario
 document.getElementById('ZonaElegir')
-	.addEventListener('click', (ev) => {
-		SelectorFichero.click();
-	});
+	.addEventListener('click', () => SelectorFichero.click());
 
 [Formato, EnmascararDni, Validez].forEach(function (control) {
 	control.addEventListener('change', function (e) {
 		if (e.target == Formato) {
-			// ajustar visibilidad del checkbox de enmascarar DNI dependiendo de si el formato muestra el DNI o no
+			// ajustar visibilidad de los checkbox dependiendo de las opciones del formato elegido
 			const formato = FormatosDnis[Formato.value];
 			DivMascaraDni.classList.toggle('Oculto', !formato.MascarasDni);
 			DivValidez.classList.toggle('Oculto', !formato.DatosValidez);
@@ -125,34 +151,41 @@ document.getElementById('ZonaElegir')
 });
 
 [Rotacion, Horizontal, Vertical, Zoom].forEach(function (control) {
-	control.addEventListener('input', function (e) {
+	control.addEventListener('input', function () {
 		RedibujarDNI();
 		AjustarVisibilidadResetear();
 	});
 });
 
-Watermark.addEventListener('input', function (e) {
-	DibujarMarcaAgua();
-});
+Watermark.addEventListener('input', () => DibujarMarcaAgua());
 
-// Al hacer click guardarla
-const botonGrabar = document.getElementById('Guardar');
 botonGrabar.addEventListener('click', GrabarImagen);
 
-configurarDobleClickComoReset('#ControlesDesplazamiento');
-configurarGiro();
-configurarEditorEsquinas();
-
-AsignarWatermarkPorDefecto(Watermark);
-
-configurarDD(document.body);
-
-let btnCompartir;
-configurarCompartir();
+activarClickConTeclado(Resetear, () => {
+	ResetearControles();
+	RedibujarDNI();
+	AjustarVisibilidadResetear();
+});
 
 activarClickConTeclado(document.getElementById('cerrar'), () => DesactivarModoEdicion());
 
+// desactivar modo edición al pulsar Esc
+document.body.addEventListener('keydown', e => {
+	if (e.key == 'Escape') {
+		// si hay un popover abierto dejamos que lo procese de forma normal
+		if (document.querySelector(':popover-open'))
+			return;
+
+		DesactivarModoEdicion();
+	}
+});
+
+configurarGiro();
+configurarEditorEsquinas();
+configurarCompartir();
+configurarDD(document.body);
 initGestures();
+AsignarWatermarkPorDefecto(Watermark);
 
 // detectar si se ha cargado la página con un hash y abrir ese details
 const hash = document.location.hash;
@@ -167,7 +200,7 @@ if (hash) {
 // Generar enlaces visibles en los ids
 querySelector_Array('#FAQ details[id]')
 	.forEach(elmto => {
-		elmto.addEventListener('click', (e) => {
+		elmto.addEventListener('click', () => {
 			if (elmto.open)
 				history.replaceState(null, '', ' ')
 			else
@@ -181,7 +214,7 @@ const soportaPopover = HTMLElement.prototype.hasOwnProperty('popover');
 // Abrir información de ayuda al pulsar el enlace
 querySelector_Array('.AbrirInfo')
 	.forEach(elmto => {
-		// popover para los enlaces dentro del asistente
+		// popover para los enlaces dentro de la zona de edición
 		if (soportaPopover && elmto.closest('#pasos')) {
 			// clonamos el contenido que queremos mostrar para seguir dentro del modo edición
 			const respuesta = document.querySelector(elmto.getAttribute('href') + ' .respuesta');
@@ -223,28 +256,9 @@ querySelector_Array('.AbrirInfo')
 		});
 	});
 
-// desactivar modo edición al pulsar Esc
-document.body
-	.addEventListener('keydown', e => {
-		if (e.key == 'Escape') {
-			// si hay un popover abierto dejamos que lo procese de forma normal
-			if (document.querySelector(':popover-open'))
-				return;
-
-			DesactivarModoEdicion();
-		}
-	});
-
-const Resetear = document.getElementById('Resetear');
-activarClickConTeclado(Resetear, () => {
-	ResetearControles();
-	RedibujarDNI();
-	AjustarVisibilidadResetear();
-});
-
 //////////////////////////////////////
 //
-// Definición de funciones
+// Modo edición
 //
 //////////////////////////////////////
 
@@ -263,81 +277,15 @@ function DesactivarModoEdicion() {
 		.forEach(bloque => bloque.inert = false);
 }
 
-/**
- * Detecta click o que activamos un elemento mediante el teclado con espacio o la tecla de enteer 
- * @param {any} elmto
- * @param {any} callback
- */
-function activarClickConTeclado(elmto, callback) {
-	elmto.tabIndex = '0';
-	elmto.addEventListener('keydown', function (ev) {
-		if (ev.key == 'Enter' || ev.key == ' ')
-			callback(ev.currentTarget, ev);
-	});
-	elmto.addEventListener('click', ev => callback(ev.currentTarget, ev));
-}
-
-function AsignarWatermarkPorDefecto(input) {
-	const hoy = new Date();
-	const sp = new URLSearchParams(location.search)
-	const sufijo = sp.has('para') ? sp.get('para') : '…';
-	input.value = `Copia ${hoy.toISOString().substring(0, 10)} para ${sufijo}`;
-}
+//////////////////////////////////////
+//
+// Carga de la foto
+//
+//////////////////////////////////////
 
 /**
-Giros de 90º del DNI
+Cargar el fichero elegido como imagen y comenzar el proceso
 */
-function configurarGiro() {
-	const botones = querySelector_Array('.girar');
-	botones.forEach(boton => boton.addEventListener('click', girarDNI));
-}
-
-function girarDNI(ev) {
-	const giro = parseInt(ev.currentTarget.dataset.giro, 10);
-
-	EnviarAlWorker({ girar: giro })
-		.then(function (respuesta) {
-			if (!respuesta.bitmap)
-				return;
-
-			const anchoPrevio = imagenOriginalBN.width;
-			const altoPrevio = imagenOriginalBN.height;
-			imagenOriginalBN = respuesta.bitmap;
-
-			// girar también las esquinas, desplazando su orden para que
-			// el punto 0 siga siendo el de arriba a la izquierda
-			const giradas = esquinasDNI.map(p => giro > 0
-				? { x: altoPrevio - p.y, y: p.x }
-				: { x: p.y, y: anchoPrevio - p.x });
-			esquinasDNI = giro > 0
-				? [giradas[3], giradas[0], giradas[1], giradas[2]]
-				: [giradas[1], giradas[2], giradas[3], giradas[0]];
-
-			DibujarEditorEsquinas();
-			SolicitarEnderezado();
-		})
-		.catch(error => console.error(error));
-}
-
-/** 
-Al hacer doble click en el label, que vuelva a poner el control a 0
-*/
-function configurarDobleClickComoReset(contenedor) {
-	const labels = querySelector_Array(contenedor + ' label');
-	labels.forEach(label => label.addEventListener('dblclick', function (ev) {
-		const lbl = ev.target;
-		const input = document.getElementById(lbl.htmlFor);
-		input.value = input.defaultValue;
-
-		input.dispatchEvent(new Event('input'));
-		input.dispatchEvent(new Event('change'));
-	}));
-}
-
-/**
- * Dibujar cargar la imagen en img, dejar en blanco y negro y comenzar proceso
- * @param {any} file
- */
 function MostrarImagen(file) {
 	const img = new Image;
 	img.onload = function () {
@@ -349,16 +297,13 @@ function MostrarImagen(file) {
 		AjustarVisibilidadResetear();
 
 		PrepararDNI(img)
-			.then(() => {
-				RedibujarDNI();
-			})
+			.then(() => RedibujarDNI())
 			.catch(error => {
 				alert('Error preparando DNI \r\n' + error);
 				console.error(error)
 			});
 
 		DibujarMascara();
-
 		DibujarMarcaAgua();
 	}
 	img.onerror = function (e) {
@@ -368,11 +313,108 @@ function MostrarImagen(file) {
 	img.src = URL.createObjectURL(file);
 }
 
-// Comunicación con el worker: cada petición lleva un id y devuelve una promesa con su respuesta
-let idMensajeWorker = 0;
-const respuestasWorker = new Map();
-let workerEscuchado = null;
+/**
+Permitir arrastrar y soltar una foto sobre la página
+*/
+function configurarDD(root) {
+	root.addEventListener('dragenter', function (event) {
+		if (!hasFiles(event))
+			return;
 
+		root.classList.add('dragover');
+
+		// solo Chrome cambia el cursor
+		// http://stackoverflow.com/questions/24000954/in-firefox-and-ie-how-can-change-the-cursor-while-dragging-over-different-target
+		event.dataTransfer.dropEffect = 'copy';
+	}, false);
+
+	root.addEventListener('dragleave', function (event) {
+		if (!event.dataTransfer)
+			return;
+
+		if (event.target != root && event.srcElement != root && event.toElement != root)
+			return;
+
+		root.classList.remove('dragover');
+	}, false);
+
+	root.addEventListener('dragover', function (event) {
+		if (!hasFiles(event))
+			return;
+
+		// solo Chrome cambia el cursor
+		event.dataTransfer.dropEffect = 'copy';
+
+		// evitamos que al soltar lo procese el navegador
+		event.preventDefault();
+	}, false);
+
+	root.addEventListener('drop', function (event) {
+		event.preventDefault();
+		const dataTransfer = event.dataTransfer;
+		if (!dataTransfer)
+			return;
+
+		root.classList.remove('dragover');
+
+		const fichero = dataTransfer.files[0];
+		MostrarImagen(fichero);
+		nombreFichero = fichero.name;
+	}, false);
+}
+
+function hasFiles(ev) {
+	const data = ev.dataTransfer;
+	return !!data && !!data.types && Array.prototype.includes.call(data.types, 'Files');
+}
+
+//////////////////////////////////////
+//
+// Comunicación con el WebWorker
+//
+//////////////////////////////////////
+
+/**
+Crea el WebWorker que procesa la imagen (blanco y negro, detección de esquinas, enderezado)
+*/
+function CrearProcesador() {
+	if (!window.Worker) {
+		alert('El navegador no soporta WebWorkers');
+		return null;
+	}
+
+	// Al usar la página como fichero, el meta CSP
+	if (document.location.protocol == 'file:') {
+		const metaCsp = document.getElementById('MetaCSP');
+		if (metaCsp) {
+			alert('Para poder ejecutar el programa desde tu ordenador necesitas eliminar la cabecera marcada como <meta id="MetaCSP"...>\r\n' +
+				'Se trata de una protección adicional para el servidor web, pero en local el navegador está aplicando otras restricciones que no son compatibles.\r\n' +
+				'Si no la eliminas, tendrás errores a continuación, o puede que no se muestre ningún error pero no veas tampoco la imagen de tu DNI (Firefox).');
+			return null;
+		}
+
+		// al trabajar con file: no deja crear un worker usando un fichero externo, así que lo apañamos...
+		// https://github.com/AlfonsoML/proteccionDNI/issues/18
+		const script = document.createElement('script');
+		script.src = 'worker.js';
+		script.type = 'application/javascript';
+		document.body.appendChild(script);
+
+		return null;
+	}
+
+	try {
+		return new Worker('worker.js');
+	} catch (e) {
+		console.log(e);
+		alert('Error creando WebWorker\r\n' + e);
+		return null;
+	}
+}
+
+/**
+Envía un mensaje al worker y devuelve una promesa que se resuelve con su respuesta
+*/
 function EnviarAlWorker(mensaje) {
 	return new Promise(function (resolve, reject) {
 		if (!procesadorDNI) {
@@ -398,10 +440,16 @@ function EnviarAlWorker(mensaje) {
 	});
 }
 
+//////////////////////////////////////
+//
+// Procesado del DNI: preparar, enderezar y girar
+//
+//////////////////////////////////////
+
 /**
 Tomamos la imagen original del DNI y la preparamos a blanco y negro,
 detectando las esquinas de la tarjeta y enderezándola si es posible.
-Deveuelve una promesa
+Devuelve una promesa
 */
 function PrepararDNI(img) {
 	// creamos un objeto transferable que podamos enviar al WebWorker
@@ -444,10 +492,10 @@ function AplicarEsquinas() {
 		});
 }
 
-// Control para no acumular peticiones de enderezado mientras se arrastran las esquinas
-let enderezadoEnCurso = false;
-let enderezadoPendiente = false;
-
+/**
+Enderezar la imagen con las esquinas actuales, sin acumular peticiones si llegan más
+mientras el worker está ocupado (por ejemplo al arrastrar una esquina rápidamente)
+*/
 function SolicitarEnderezado() {
 	if (!esquinasDNI || !EsConvexo(esquinasDNI))
 		return;
@@ -470,50 +518,45 @@ function SolicitarEnderezado() {
 }
 
 /**
-Se encarga de convertir la imagen original del DNI en una en blanco y negro mediante un webWorker
+Giros de 90º de la imagen original
 */
-let procesadorDNI = CrearProcesador();
-
-function CrearProcesador() {
-	if (!window.Worker) {
-		alert('El navegador no soporta WebWorkers');
-		return null;
-	}
-
-	// Al usar la página como fichero, el meta CSP
-	if (document.location.protocol == 'file:') {
-		const metaCsp = document.getElementById('MetaCSP');
-		if (metaCsp) {
-			alert('Para poder ejecutar el programa desde tu ordenador necesitas eliminar la cabecera marcada como <meta id="MetaCSP"...>\r\n' +
-				'Se trata de una protección adicional para el servidor web, pero en local el navegador está aplicando otras restricciones que no son compatibles.\r\n' +
-				'Si no la eliminas, tendrás errores a continuación, o puede que no se muestre ningún error pero no veas tampoco la imagen de tu DNI (Firefox).');
-			return null;
-		}
-
-		// al trabajar con file: no deja crear un worker usando un fichero externo, así que lo apañamos...
-		// https://github.com/AlfonsoML/proteccionDNI/issues/18
-		const script = document.createElement('script');
-		script.src = 'worker.js';
-		script.type = 'application/javascript';
-		document.body.appendChild(script);
-
-		return null;
-	}
-
-	try {
-		return new Worker('worker.js');
-	} catch (e) {
-		console.log(e);
-		alert('Error creando WebWorker\r\n' + e);
-		return null;
-	}
+function configurarGiro() {
+	querySelector_Array('.girar')
+		.forEach(boton => boton.addEventListener('click', girarDNI));
 }
 
-// Valores de Zoom y desplazamiento calculados al encuadrar automáticamente el DNI en el recuadro
-let posicionAutomatica = null;
+function girarDNI(ev) {
+	const giro = parseInt(ev.currentTarget.dataset.giro, 10);
 
-// Límites por defecto de los controles de posición, para restaurarlos con cada foto nueva
-const RangosPorDefecto = [Zoom, Horizontal, Vertical].map(control => ({ control, min: control.min, max: control.max }));
+	EnviarAlWorker({ girar: giro })
+		.then(function (respuesta) {
+			if (!respuesta.bitmap)
+				return;
+
+			const anchoPrevio = imagenOriginalBN.width;
+			const altoPrevio = imagenOriginalBN.height;
+			imagenOriginalBN = respuesta.bitmap;
+
+			// girar también las esquinas, desplazando su orden para que
+			// el punto 0 siga siendo el de arriba a la izquierda
+			const giradas = esquinasDNI.map(p => giro > 0
+				? { x: altoPrevio - p.y, y: p.x }
+				: { x: p.y, y: anchoPrevio - p.x });
+			esquinasDNI = giro > 0
+				? [giradas[3], giradas[0], giradas[1], giradas[2]]
+				: [giradas[1], giradas[2], giradas[3], giradas[0]];
+
+			DibujarEditorEsquinas();
+			SolicitarEnderezado();
+		})
+		.catch(error => console.error(error));
+}
+
+//////////////////////////////////////
+//
+// Encuadre automático del resultado
+//
+//////////////////////////////////////
 
 /**
 Ajusta el zoom y los desplazamientos para encuadrar el DNI detectado en el recuadro de previsualización.
@@ -574,6 +617,42 @@ function AsignarValorAmpliandoRango(input, valor) {
 	input.value = valor;
 }
 
+/**
+Valor inicial de un control de posición, teniendo en cuenta el encuadre automático
+*/
+function ValorInicial(control) {
+	if (posicionAutomatica) {
+		switch (control) {
+			case Zoom:
+				return posicionAutomatica.zoom;
+			case Horizontal:
+				return posicionAutomatica.horizontal;
+			case Vertical:
+				return posicionAutomatica.vertical;
+		}
+	}
+	return control.defaultValue;
+}
+
+/**
+Vuelve a poner los controles de posición con los valores iniciales
+*/
+function ResetearControles() {
+	[Rotacion, Horizontal, Vertical, Zoom].forEach(function (control) {
+		control.value = ValorInicial(control);
+	});
+}
+
+/**
+El botón de deshacer solo se muestra cuando la posición difiere del encuadre automático
+*/
+function AjustarVisibilidadResetear() {
+	const movido = [Rotacion, Horizontal, Vertical, Zoom]
+		.some(control => control.value != ValorInicial(control));
+
+	Resetear.style.display = movido ? '' : 'none';
+}
+
 //////////////////////////////////////
 //
 // Editor de esquinas sobre la imagen original
@@ -609,9 +688,6 @@ function EsConvexo(esquinas) {
 	return true;
 }
 
-// escala y desplazamiento con los que se muestra la imagen original dentro del editor de esquinas
-let transformacionEditor = { escala: 1, x: 0, y: 0 };
-
 /**
 Dibujar la imagen original en el editor y colocar el marco con las 4 esquinas
 */
@@ -634,6 +710,9 @@ function DibujarEditorEsquinas() {
 	ActualizarMarcoEsquinas();
 }
 
+/**
+Pasa un punto de coordenadas de la imagen original a coordenadas del canvas del editor
+*/
 function EsquinaAEditor(punto) {
 	return {
 		x: transformacionEditor.x + punto.x * transformacionEditor.escala,
@@ -771,41 +850,11 @@ function ActualizarLupa(indice) {
 	Lupa.style.top = arriba + '%';
 }
 
-/**
-Valor inicial de un control de posición, teniendo en cuenta el encuadre automático
-*/
-function ValorInicial(control) {
-	if (posicionAutomatica) {
-		switch (control) {
-			case Zoom:
-				return posicionAutomatica.zoom;
-			case Horizontal:
-				return posicionAutomatica.horizontal;
-			case Vertical:
-				return posicionAutomatica.vertical;
-		}
-	}
-	return control.defaultValue;
-}
-
-/**
-Vuelve a poner los controles de posición y rotación con los valores iniciales
-*/
-function ResetearControles() {
-	[Rotacion, Horizontal, Vertical, Zoom].forEach(function (control) {
-		control.value = ValorInicial(control);
-	});
-}
-
-function AjustarVisibilidadResetear() {
-	const Movido = [Rotacion, Horizontal, Vertical, Zoom]
-		.some((control) => control.value != ValorInicial(control));
-
-	Resetear.style.display = Movido ? '' : 'none';
-}
-
-// Saber si tenemos pendiente un redibujo del DNI para no saturar la CPU/GPU
-let redibujoDNIpendiente = false;
+//////////////////////////////////////
+//
+// Copia protegida: redibujado, máscaras y marca de agua
+//
+//////////////////////////////////////
 
 function RedibujarDNI() {
 	if (imagenDNI_BN == null)
@@ -815,41 +864,30 @@ function RedibujarDNI() {
 		return;
 
 	redibujoDNIpendiente = true;
-	requestAnimationFrame(RedibujarEnDNIEnRAF);
+	requestAnimationFrame(RedibujarDNIEnRAF);
 }
 
 /**
-	Función que vamos a llamar con un throttle de requestAnimationFrame, colapsando multiples llamadas consecutivas
-	Se encarga de dibujar la copia que tenemos en BN del DNI ajustando posición y giro
+Función que vamos a llamar con un throttle de requestAnimationFrame, colapsando multiples llamadas consecutivas.
+Se encarga de dibujar la copia que tenemos en BN del DNI ajustando posición y ángulo
 */
-function RedibujarEnDNIEnRAF() {
+function RedibujarDNIEnRAF() {
 	redibujoDNIpendiente = false;
 
 	let canvasOrigen = imagenDNI_BN;
 
 	// pequeños ajustes de ángulo
-	const degrees = Rotacion.value;
-	if (degrees != 0) {
+	const grados = Rotacion.value;
+	if (grados != 0) {
 		const canvasAjusteAngulo = new OffscreenCanvas(canvasOrigen.width, canvasOrigen.height);
 
 		const ctxRotado = canvasAjusteAngulo.getContext('2d');
-		ctxRotado.clearRect(0, 0, canvasAjusteAngulo.width, canvasAjusteAngulo.height);
-		// save the unrotated context of the canvas so we can restore it later
-		// the alternative is to untranslate & unrotate after drawing
 		ctxRotado.save();
-
-		// move to the center of the canvas
 		ctxRotado.translate(canvasAjusteAngulo.width / 2, canvasAjusteAngulo.height / 2);
-
-		// rotate the canvas to the specified degrees
-		ctxRotado.rotate(degrees * Math.PI / 180);
-
-		// draw the image
-		// since the context is rotated, the image will be rotated also
+		ctxRotado.rotate(grados * Math.PI / 180);
 		ctxRotado.drawImage(canvasOrigen, - canvasOrigen.width / 2, - canvasOrigen.height / 2);
-
-		// we’re done with the rotating so restore the unrotated context
 		ctxRotado.restore();
+
 		canvasOrigen = canvasAjusteAngulo;
 	}
 
@@ -873,33 +911,29 @@ function DibujarMascara() {
 		ctx.fill();
 	}
 	const DatosFormato = FormatosDnis[Formato.value];
-	const bloques = DatosFormato.Mascaras;
 
 	const ctx = canvasMascara.getContext('2d');
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.fillStyle = 'black';
-	bloques.forEach(DibujarRectangulo);
+	DatosFormato.Mascaras.forEach(DibujarRectangulo);
 
-	if (Validez.checked) {
-		const bloquesValidez = DatosFormato.DatosValidez;
-		bloquesValidez.forEach(DibujarRectangulo);
-	}
-	if (EnmascararDni.checked) {
+	if (Validez.checked)
+		DatosFormato.DatosValidez.forEach(DibujarRectangulo);
+
+	if (EnmascararDni.checked && DatosFormato.MascarasDni) {
 		const bloquesDni = DatosFormato.MascarasDni;
-		if (bloquesDni) {
-			ctx.fillStyle = 'white';
-			bloquesDni.forEach(DibujarRectangulo);
+		ctx.fillStyle = 'white';
+		bloquesDni.forEach(DibujarRectangulo);
 
-			let bloque = bloquesDni[0]
-			if (bloque.h == 50)
-				ctx.font = '74px sans-serif';
-			else
-				ctx.font = '82px sans-serif';
-			ctx.fillStyle = 'black';
-			ctx.fillText('***', bloque.x, bloque.y + bloque.h + 20);
-			bloque = bloquesDni[1]
-			ctx.fillText('**', bloque.x, bloque.y + bloque.h + 20);
-		}
+		let bloque = bloquesDni[0]
+		if (bloque.h == 50)
+			ctx.font = '74px sans-serif';
+		else
+			ctx.font = '82px sans-serif';
+		ctx.fillStyle = 'black';
+		ctx.fillText('***', bloque.x, bloque.y + bloque.h + 20);
+		bloque = bloquesDni[1]
+		ctx.fillText('**', bloque.x, bloque.y + bloque.h + 20);
 	}
 }
 
@@ -914,20 +948,24 @@ function DibujarMarcaAgua() {
 	if (!texto)
 		return;
 
-	const marcas = FormatosDnis[Formato.value].Watermarks;
-	marcas.forEach(marca => {
+	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
 		RellenarTexto(texto, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
 	});
 }
 
 /**
- * Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar
- * @param {any} texto
- * @param {any} x
- * @param {any} y
- * @param {any} maxWidth
- * @param {any} maxHeight
- */
+Poner el texto de la marca de agua por defecto, con la fecha actual y el parámetro "para" si existe
+*/
+function AsignarWatermarkPorDefecto(input) {
+	const hoy = new Date();
+	const sp = new URLSearchParams(location.search)
+	const sufijo = sp.has('para') ? sp.get('para') : '…';
+	input.value = `Copia ${hoy.toISOString().substring(0, 10)} para ${sufijo}`;
+}
+
+/**
+Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar
+*/
 function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 	ctx.font = fuente;
 	ctx.fillStyle = estilo;
@@ -990,26 +1028,24 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 	}
 }
 
+//////////////////////////////////////
+//
+// Guardar y compartir
+//
+//////////////////////////////////////
+
 /**
 Combinar los 3 canvas parciales en una sola imagen para descarga canvaComposicion
 */
 function ComponerImagen() {
-	botonGrabar.disabled = true;
-	if (btnCompartir)
-		btnCompartir.disabled = true;
-
 	const ctx = canvaComposicion.getContext('2d');
 	ctx.drawImage(canvas, 0, 0);
 	ctx.drawImage(canvasMascara, 0, 0);
 	ctx.drawImage(canvasWatermark, 0, 0);
-
-	botonGrabar.disabled = false;
-	if (btnCompartir)
-		btnCompartir.disabled = false;
 }
 
 /**
-Toma el nombre de ficheo actual y lo devuelve añadiendo el sufijo ' - protegido.jpg'
+Toma el nombre de fichero actual y lo devuelve añadiendo el sufijo ' - protegido.jpg'
 */
 function GenerarNombreFichero() {
 	const match = nombreFichero.match(/([^\/\\]+)(?=\.[^\.]+$)/)
@@ -1034,90 +1070,12 @@ function GrabarImagen() {
 }
 
 /**
- * Returns an Array with the result of a querySelectorAll call (a NodeList)
- * @param {any} selector
- * @param {any} root
- * @returns
- */
-function querySelector_Array(selector, root) {
-	return [].slice.call((root || document).querySelectorAll(selector));
-}
-
-// d&d
-function configurarDD(root) {
-	root.addEventListener('dragenter', function (event) {
-		if (!hasFiles(event))
-			return;
-
-		root.classList.add('dragover');
-
-		// solo Chrome cambia el cursor
-		// http://stackoverflow.com/questions/24000954/in-firefox-and-ie-how-can-change-the-cursor-while-dragging-over-different-target
-		event.dataTransfer.dropEffect = 'copy';
-	}, false);
-
-	root.addEventListener('dragleave', function (event) {
-		const dataTransfer = event.dataTransfer;
-		if (!dataTransfer)
-			return;
-
-		if (event.target != root && event.srcElement != root && event.toElement != root)
-			return;
-
-		root.classList.remove('dragover');
-	}, false);
-
-	root.addEventListener('dragover', function (event) {
-		if (!hasFiles(event))
-			return;
-
-		const dataTransfer = event.dataTransfer;
-
-		// solo Chrome cambia el cursor
-		// http://stackoverflow.com/questions/24000954/in-firefox-and-ie-how-can-change-the-cursor-while-dragging-over-different-target
-		dataTransfer.dropEffect = 'copy';
-
-		// evitamos que al soltar lo procese el navegador
-		event.preventDefault();
-	}, false);
-
-	root.addEventListener('drop', function (event) {
-		event.preventDefault();
-		const dataTransfer = event.dataTransfer;
-		if (!dataTransfer)
-			return;
-
-		root.classList.remove('dragover');
-
-		const fichero = dataTransfer.files[0];
-		Previsualizacion.style.display = '';
-
-		MostrarImagen(fichero);
-		nombreFichero = fichero.name;
-	}, false);
-}
-
-function hasFiles(ev) {
-	const data = ev.dataTransfer;
-
-	if (!data || !data.types)
-		return false;
-
-	if (data.types.contains && data.types.contains('Files') && !data.types.contains('text/html')) return true;
-	if (data.types.indexOf && data.types.indexOf('Files') != -1) return true;
-	return false;
-}
-
+Activar el botón de compartir si el navegador soporta compartir ficheros (Firefox no lo tiene implementado)
+*/
 function configurarCompartir() {
-	btnCompartir = document.getElementById('Compartir');
+	const btnCompartir = document.getElementById('Compartir');
 
-	if (typeof navigator.share == 'undefined') {
-		btnCompartir.remove();
-		return;
-	}
-
-	// Verificar si el navegador soporta compartir ficheros (Firefox no lo tiene implementado)
-	if (!navigator.canShare({
+	if (typeof navigator.share == 'undefined' || !navigator.canShare({
 		title: 'Copia de mi DNI',
 		files: [new File([''], 'test.jpg', { type: 'image/jpeg' })],
 	})) {
@@ -1160,60 +1118,51 @@ function configurarCompartir() {
 		}
 		DesactivarModoEdicion();
 	});
-
 }
 
-/*
-Touch gestures https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events/Pinch_zoom_gestures
-*/
-
-/**
- * Calcula la distancia actual entre los dos dedos
- * @returns
- */
-function CalcularDistancia() {
-	const toque0 = evCache[0];
-	const toque1 = evCache[1];
-
-	const dx = toque1.clientX - toque0.clientX;
-	const dy = toque1.clientY - toque0.clientY;
-	return Math.sqrt(dx * dx + dy * dy);
-}
-
-/**
- * Calcula el ángulo entre los dos puntos de toque
- * @returns
- */
-function CalcularAngulo() {
-	const toque0 = evCache[0];
-	const toque1 = evCache[1];
-
-	const dx = toque1.clientX - toque0.clientX;
-	const dy = toque1.clientY - toque0.clientY;
-	return Math.atan2(dy, dx) * (180 / Math.PI);
-}
+//////////////////////////////////////
+//
+// Gestos táctiles sobre la copia protegida
+// https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events/Pinch_zoom_gestures
+//
+//////////////////////////////////////
 
 function initGestures() {
-	// Install event handlers for the pointer target
 	const el = Previsualizacion;
 	el.onpointerdown = pointerdownHandler;
 	el.onpointermove = pointermoveHandler;
 
-	// Use same handler for pointer{up,cancel,out,leave} events since
-	// the semantics for these events - in this app - are the same.
+	// los eventos de soltar/cancelar/salir se tratan igual
 	el.onpointerup = pointerupHandler;
 	el.onpointercancel = pointerupHandler;
 	el.onpointerout = pointerupHandler;
 	el.onpointerleave = pointerupHandler;
 }
 
+/**
+Calcula la distancia actual entre los dos dedos
+*/
+function CalcularDistancia() {
+	const dx = evCache[1].clientX - evCache[0].clientX;
+	const dy = evCache[1].clientY - evCache[0].clientY;
+	return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+Calcula el ángulo entre los dos puntos de toque
+*/
+function CalcularAngulo() {
+	const dx = evCache[1].clientX - evCache[0].clientX;
+	const dy = evCache[1].clientY - evCache[0].clientY;
+	return Math.atan2(dy, dx) * (180 / Math.PI);
+}
+
 function pointerdownHandler(ev) {
-	// The pointerdown event signals the start of a touch interaction.
-	// This event is cached to support 2-finger gestures
+	// se guarda cada puntero activo para poder detectar gestos de dos dedos
 	evCache.push(ev);
 
 	if (evCache.length == 2) {
-		// registrar datos iniciales para cambio de zoom
+		// registrar datos iniciales para cambio de zoom y rotación
 		distanciaInicial = CalcularDistancia();
 		anguloInicial = CalcularAngulo();
 		rotacionInicial = Rotacion.valueAsNumber;
@@ -1236,15 +1185,11 @@ function registrarUnPunto(ev) {
 }
 
 function pointermoveHandler(ev) {
-	// This function implements a 2-pointer horizontal pinch/zoom gesture.
-
-	// Find this event in the cache and update its record with this event
-	const index = evCache.findIndex(
-		(cachedEv) => cachedEv.pointerId === ev.pointerId,
-	);
+	// actualizar el registro de este puntero
+	const index = evCache.findIndex(cachedEv => cachedEv.pointerId === ev.pointerId);
 	evCache[index] = ev;
 
-	// If two pointers are down, check for pinch gestures
+	// con dos dedos, pellizco para zoom y giro para rotación fina
 	if (evCache.length === 2) {
 		const cambioDistancia = CalcularDistancia() - distanciaInicial;
 		ActualizarValorInput(Zoom, zoomInicial + cambioDistancia * 0.01);
@@ -1253,27 +1198,52 @@ function pointermoveHandler(ev) {
 		ActualizarValorInput(Rotacion, rotacionInicial + cambioRotacion);
 	}
 
-	// desplazamiento Horizontal/Vertical
+	// con un dedo, desplazamiento horizontal/vertical
 	if (evCache.length == 1) {
 		ActualizarValorInput(Horizontal, desplazamientoInicial.x + escalaImagen * (ev.clientX - puntoInicial.x));
-
 		ActualizarValorInput(Vertical, desplazamientoInicial.y + escalaImagen * (ev.clientY - puntoInicial.y));
 	}
 }
 
 function pointerupHandler(ev) {
-	// Remove this pointer from the cache 
-	const index = evCache.findIndex(
-		(cachedEv) => cachedEv.pointerId === ev.pointerId,
-	);
+	// quitar este puntero del registro
+	const index = evCache.findIndex(cachedEv => cachedEv.pointerId === ev.pointerId);
 	evCache.splice(index, 1);
 
 	if (evCache.length == 1)
 		registrarUnPunto(evCache[0]);
 }
 
+//////////////////////////////////////
+//
+// Utilidades
+//
+//////////////////////////////////////
+
+/**
+Detecta click o que activamos un elemento mediante el teclado con espacio o la tecla de enter
+*/
+function activarClickConTeclado(elmto, callback) {
+	elmto.tabIndex = '0';
+	elmto.addEventListener('keydown', function (ev) {
+		if (ev.key == 'Enter' || ev.key == ' ')
+			callback(ev.currentTarget, ev);
+	});
+	elmto.addEventListener('click', ev => callback(ev.currentTarget, ev));
+}
+
+/**
+Asigna un valor a un input y dispara sus eventos como si lo hubiera cambiado el usuario
+*/
 function ActualizarValorInput(input, value) {
 	input.value = value;
 	input.dispatchEvent(new Event('input'));
 	input.dispatchEvent(new Event('change'));
+}
+
+/**
+Returns an Array with the result of a querySelectorAll call (a NodeList)
+*/
+function querySelector_Array(selector, root) {
+	return [].slice.call((root || document).querySelectorAll(selector));
 }

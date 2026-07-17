@@ -3,13 +3,11 @@ Código específico para la página de pruebas
 */
 'use strict';
 
-const imgs = querySelector_Array('#Ejemplos img');
-
-imgs.forEach(imagenDemo => {
-	imagenDemo.title = imagenDemo.alt;
-	imagenDemo.addEventListener('click', CambiarImagenTest);
-});
-
+querySelector_Array('#Ejemplos img')
+	.forEach(imagenDemo => {
+		imagenDemo.title = imagenDemo.alt;
+		imagenDemo.addEventListener('click', CambiarImagenTest);
+	});
 
 function CambiarImagenTest(ev) {
 	const actual = document.querySelector('.Elegida');
@@ -24,21 +22,17 @@ function CambiarImagenTest(ev) {
 	ActivarModoEdicion();
 	posicionAutomatica = null;
 	ResetearControles();
-	Previsualizacion.style.display = 'block';
 
-	const src = img.src;
-	// si vemos que coincide con el nombre de un formato, seleccionarlo automáticamente
-	const re = /ejemplos\/(.*)\.webp/;
-	const match = re.exec(src);
+	// si el nombre coincide con el de un formato, seleccionarlo automáticamente
+	const match = /ejemplos\/(.*)\.webp/.exec(img.src);
 	if (match) {
 		ActualizarValorInput(Formato, match[1]);
 	}
 
 	if (nombreFichero.startsWith('file:')) {
+		// sin servidor web no funciona el worker, se usa la imagen tal cual sin procesar
 		const canvasTmp = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
-
-		const ctxImagen = canvasTmp.getContext('2d');
-		ctxImagen.drawImage(img, 0, 0);
+		canvasTmp.getContext('2d').drawImage(img, 0, 0);
 
 		imagenDNI_BN = canvasTmp.transferToImageBitmap();
 		imagenOriginalBN = imagenDNI_BN;
@@ -48,23 +42,9 @@ function CambiarImagenTest(ev) {
 		RedibujarDNI();
 	} else {
 		PrepararDNI(img)
-			.then(() => {
-				RedibujarDNI();
-			});
+			.then(() => RedibujarDNI());
 	}
 
 	DibujarMascara();
 	DibujarMarcaAgua();
 }
-
-/**
- * Returns an Array with the result of a querySelectorAll call (a NodeList)
- * @param {any} selector
- * @param {any} root
- * @returns
- */
-function querySelector_Array(selector, root) {
-	return [].slice.call((root || document).querySelectorAll(selector));
-}
-
-

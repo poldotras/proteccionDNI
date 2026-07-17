@@ -1,13 +1,57 @@
-﻿/**
-Código específico para la página de pruebas
+/**
+Código específico de la página de pruebas: descarga la estructura del editor
+desde editor.html para no duplicarla, carga sus scripts y añade la galería
+de DNIs de ejemplo. Necesita un servidor web, no funciona abriendo el fichero.
 */
 'use strict';
 
-querySelector_Array('#Ejemplos img')
-	.forEach(imagenDemo => {
-		imagenDemo.title = imagenDemo.alt;
-		imagenDemo.addEventListener('click', CambiarImagenTest);
+// scripts del editor, en el mismo orden en que los carga editor.html
+const ScriptsEditor = [
+	'formatos.js',
+	'js/base.js',
+	'js/procesador.js',
+	'js/editorEsquinas.js',
+	'js/resultado.js',
+	'js/guardar.js',
+	'js/app.js',
+];
+
+fetch('editor.html')
+	.then(respuesta => respuesta.text())
+	.then(function (html) {
+		const doc = new DOMParser().parseFromString(html, 'text/html');
+
+		// inyectar la sección del editor y el bloque oculto con las respuestas de ayuda
+		const contenedor = document.getElementById('ContenedorEditor');
+		contenedor.appendChild(doc.getElementById('pasos'));
+		contenedor.appendChild(doc.querySelector('main > div.Oculto'));
+
+		// cargar los scripts del editor en orden, ahora que ya existen sus elementos
+		return ScriptsEditor.reduce((previo, src) => previo.then(() => CargarScript(src)), Promise.resolve());
+	})
+	.then(ActivarGaleria)
+	.catch(function (error) {
+		console.error(error);
+		alert('No se ha podido cargar el editor.\r\nLa página de pruebas necesita un servidor web, no funciona abriendo el fichero directamente.');
 	});
+
+function CargarScript(src) {
+	return new Promise(function (resolve, reject) {
+		const script = document.createElement('script');
+		script.src = src;
+		script.onload = resolve;
+		script.onerror = () => reject('Error cargando ' + src);
+		document.body.appendChild(script);
+	});
+}
+
+function ActivarGaleria() {
+	document.querySelectorAll('#Ejemplos img')
+		.forEach(imagenDemo => {
+			imagenDemo.title = imagenDemo.alt;
+			imagenDemo.addEventListener('click', CambiarImagenTest);
+		});
+}
 
 function CambiarImagenTest(ev) {
 	const actual = document.querySelector('.Elegida');
@@ -28,21 +72,8 @@ function CambiarImagenTest(ev) {
 		ActualizarValorInput(Formato, match[1]);
 	}
 
-	if (nombreFichero.startsWith('file:')) {
-		// sin servidor web no funciona el worker, se usa la imagen tal cual sin procesar
-		const canvasTmp = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
-		canvasTmp.getContext('2d').drawImage(img, 0, 0);
-
-		imagenDNI_BN = canvasTmp.transferToImageBitmap();
-		imagenOriginalBN = imagenDNI_BN;
-		esquinasDNI = EsquinasPorDefecto();
-		DibujarEditorEsquinas();
-
-		RedibujarDNI();
-	} else {
-		PrepararDNI(img)
-			.then(() => RedibujarDNI());
-	}
+	PrepararDNI(img)
+		.then(() => RedibujarDNI());
 
 	DibujarMascara();
 	DibujarMarcaAgua();

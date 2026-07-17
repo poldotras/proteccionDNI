@@ -10,7 +10,8 @@ Si quieres descargarte los ficheros para ejecutarlo desde tu ordenador, pincha e
 ## Estructura del código
 
 - `index.html`: portada con la explicación, el ejemplo y las preguntas frecuentes
-- `editor.html` / `test.html`: el editor y su página de pruebas con DNIs de ejemplo
+- `editor.html`: el editor donde se genera la copia protegida
+- `test.html`: página de pruebas que carga la estructura de editor.html y añade una galería de DNIs de ejemplo
 - `estilos.css`: los estilos de ambas páginas
 - `formatos.js`: definición de los formatos de DNI (zonas a ocultar y de marca de agua)
 - `worker.js`: WebWorker que procesa la imagen (blanco y negro, detección de esquinas, enderezado y giros)
@@ -21,7 +22,7 @@ Si quieres descargarte los ficheros para ejecutarlo desde tu ordenador, pincha e
 - `js/resultado.js`: dibujado de la copia protegida, máscaras de censura y marca de agua
 - `js/guardar.js`: composición de la imagen final, descarga y compartir
 - `js/app.js`: flujo principal y cableado de eventos (se carga el último)
-- `test.js`: código específico de la página de pruebas
+- `test.js`: código de la página de pruebas: descarga e inyecta el editor y activa la galería
 
 Icono de máscara creado por [Andrew Nenakhov](https://pictogrammers.com/library/mdi/icon/domino-mask/).  
 Icono candado para Web App por [Dios Campechano](https://mastodon.social/@Dios_Campechano@tkz.one/114094705033755223).  

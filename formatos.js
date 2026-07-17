@@ -35,10 +35,6 @@ const FormatosDnis = {
 			{ x: 380, y: 380, w: 400, h: 35 }, // emision, validez
 		],
 		Watermarks: [{
-			fuente: "600 44px Georgia, 'Times New Roman', serif",
-			estilo: 'rgb(0 0 0 / 45%)',
-			bb: { x: 10, y: 190, w: 360, h: 490 }
-		}, {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
@@ -81,10 +77,6 @@ const FormatosDnis = {
 			{ x: 580, y: 445, w: 200, h: 35 }, // Validez
 		],
 		Watermarks: [{
-			fuente: "600 44px Georgia, 'Times New Roman', serif",
-			estilo: 'rgb(0 0 0 / 45%)',
-			bb: { x: 10, y: 140, w: 350, h: 460 }
-		}, {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
@@ -121,10 +113,6 @@ const FormatosDnis = {
 			{ x: 290, y: 400, w: 230, h: 35 }, // Validez
 		],
 		Watermarks: [{
-			fuente: "600 44px Georgia, 'Times New Roman', serif",
-			estilo: 'rgb(0 0 0 / 45%)',
-			bb: { x: 700, y: 340, w: 290, h: 310 }
-		}, {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,

@@ -202,41 +202,34 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight, an
 	// parámetros de la onda: cuánto sube/baja cada letra y cada cuántos píxeles se repite
 	const amplitud = lineHeight * 0.22;
 	const longitudOnda = 250;
+	const yMax = y + maxHeight - lineHeight - amplitud;
 
 	// Dividir el texto en letras (con un separador final para repeticiones)
 	const letras = (texto + ' - ').split('');
 	const Metricas = MetricasLetras(ctx, fuente, letras);
-
-	// recortar a la zona: las líneas cruzan los bordes y lo que sobresale queda cortado,
-	// de forma que el relleno llega hasta el borde sin dejar huecos
-	ctx.save();
-	ctx.beginPath();
-	ctx.rect(x, y, maxWidth, maxHeight);
-	ctx.clip();
-
-	const yFin = y + maxHeight;
-	// la primera línea empieza pegada al borde superior
-	y += metrics.fontBoundingBoxAscent;
 
 	// bucle hasta rellenar toda la zona, vamos letra a letra
 	let n = 0;
 	let ancho = 0;
 	while (true) {
 		const letra = letras[n];
+		// Medir la anchura que tendrá si añadimos esta letra
+		const anchoLetra = Metricas[letra];
+		// Si no cabe en la linea, bajamos a la siguiente y la letra se escribe allí
+		if (ancho + anchoLetra > maxWidth && ancho > 0) {
+			y += lineHeight;
+			// cuando superemos el límite vertical paramos
+			if (y >= yMax)
+				return;
+
+			ancho = 0;
+			continue;
+		}
+
 		// la onda avanza con la posición horizontal y se desfasa en cada linea
 		const yOnda = y + amplitud * Math.sin((ancho * 2 * Math.PI) / longitudOnda + y);
 		ctx.fillText(letra, x + ancho, yOnda);
-		ancho += Metricas[letra];
-
-		// una vez cruzado el borde derecho, bajamos a la línea siguiente
-		if (ancho >= maxWidth) {
-			y += lineHeight;
-			// la última línea también cruza el borde inferior antes de parar
-			if (y >= yFin + lineHeight)
-				break;
-
-			ancho = 0;
-		}
+		ancho += anchoLetra;
 
 		// cuando llegamos al final del texto, reseteamos para volver a empezar
 		if (n === letras.length - 1)
@@ -244,6 +237,4 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight, an
 		else
 			n++;
 	}
-
-	ctx.restore();
 }

@@ -20,8 +20,7 @@ function CambiarImagenTest(ev) {
 	nombreFichero = img.src;
 
 	ActivarModoEdicion();
-	posicionAutomatica = null;
-	ResetearAjustes();
+	tarjetaResultado = null;
 
 	// si el nombre coincide con el de un formato, seleccionarlo automáticamente
 	const match = /ejemplos\/(.*)\.webp/.exec(img.src);

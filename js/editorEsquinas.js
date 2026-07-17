@@ -213,7 +213,7 @@ function AplicarEsquinas() {
 				return;
 
 			imagenDNI_BN = respuesta.bitmap;
-			AjustarPosicionAutomatica(respuesta.tarjeta);
+			tarjetaResultado = respuesta.tarjeta;
 			RedibujarDNI();
 		});
 }

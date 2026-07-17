@@ -34,39 +34,58 @@ function RedibujarDNI() {
 
 /**
 Función que vamos a llamar con un throttle de requestAnimationFrame, colapsando multiples llamadas consecutivas.
-Se encarga de dibujar la copia que tenemos en BN del DNI ajustando posición y ángulo
+Dibuja la zona de la tarjeta enderezada llenando el canvas, de forma que las
+máscaras de censura (definidas sobre el canvas) caigan donde corresponde
 */
 function RedibujarDNIEnRAF() {
 	redibujoDNIpendiente = false;
 
-	let canvasOrigen = imagenDNI_BN;
+	const ctx = canvas.getContext('2d', { alpha: false });
+	ctx.fillStyle = 'white';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-	// pequeños ajustes de ángulo
-	const grados = ajustesResultado.rotacion;
-	if (grados != 0) {
-		const canvasAjusteAngulo = new OffscreenCanvas(canvasOrigen.width, canvasOrigen.height);
+	const zona = tarjetaResultado ? ZonaConProporcion(tarjetaResultado) : ZonaPorDefecto();
+	ctx.drawImage(imagenDNI_BN, zona.x, zona.y, zona.w, zona.h, 0, 0, canvas.width, canvas.height);
+}
 
-		const ctxRotado = canvasAjusteAngulo.getContext('2d');
-		ctxRotado.save();
-		ctxRotado.translate(canvasAjusteAngulo.width / 2, canvasAjusteAngulo.height / 2);
-		ctxRotado.rotate(grados * Math.PI / 180);
-		ctxRotado.drawImage(canvasOrigen, - canvasOrigen.width / 2, - canvasOrigen.height / 2);
-		ctxRotado.restore();
+/**
+Amplía la zona indicada hasta la proporción del canvas, centrando el exceso,
+para poder mostrarla sin deformarla
+*/
+function ZonaConProporcion(zona) {
+	const proporcion = canvas.width / canvas.height;
+	let { x, y, w, h } = zona;
 
-		canvasOrigen = canvasAjusteAngulo;
+	if (w / h > proporcion) {
+		const alto = w / proporcion;
+		y -= (alto - h) / 2;
+		h = alto;
+	} else {
+		const ancho = h * proporcion;
+		x -= (ancho - w) / 2;
+		w = ancho;
 	}
 
-	const ctx = canvas.getContext('2d', { alpha: false });
+	return { x, y, w, h };
+}
 
-	// Borrar
-	ctx.rect(0, 0, canvas.width, canvas.height);
-	ctx.fillStyle = 'white';
-	ctx.fill();
-
-	// volcar Imagen DNI escalada y con desplazamiento
-	const anchoEscalado = canvas.width * ajustesResultado.zoom;
-	const aspectRatio = canvasOrigen.height / canvasOrigen.width;
-	ctx.drawImage(canvasOrigen, ajustesResultado.horizontal, ajustesResultado.vertical, anchoEscalado, anchoEscalado * aspectRatio);
+/**
+Sin tarjeta detectada se muestra un recorte centrado de la imagen con la proporción del canvas
+*/
+function ZonaPorDefecto() {
+	const proporcion = canvas.width / canvas.height;
+	let w = imagenDNI_BN.width;
+	let h = w / proporcion;
+	if (h > imagenDNI_BN.height) {
+		h = imagenDNI_BN.height;
+		w = h * proporcion;
+	}
+	return {
+		x: (imagenDNI_BN.width - w) / 2,
+		y: (imagenDNI_BN.height - h) / 2,
+		w,
+		h,
+	};
 }
 
 /** Ocultar las partes de la imagen que no hacen ninguna falta, dependerá del formato de DNI y el lado */

@@ -41,9 +41,7 @@ function MostrarImagen(file) {
 		URL.revokeObjectURL(img.src)
 
 		ActivarModoEdicion();
-		posicionAutomatica = null;
-		ResetearAjustes();
-		AjustarVisibilidadResetear();
+		tarjetaResultado = null;
 
 		PrepararDNI(img)
 			.then(() => RedibujarDNI())
@@ -88,7 +86,7 @@ function PrepararDNI(img) {
 			if (respuesta.esquinas)
 				return AplicarEsquinas();
 
-			AjustarPosicionAutomatica(respuesta.tarjeta);
+			tarjetaResultado = respuesta.tarjeta;
 		});
 }
 
@@ -190,12 +188,6 @@ Watermark.addEventListener('input', () => DibujarMarcaAgua());
 
 botonGrabar.addEventListener('click', GrabarImagen);
 
-activarClickConTeclado(Resetear, () => {
-	ResetearAjustes();
-	RedibujarDNI();
-	AjustarVisibilidadResetear();
-});
-
 activarClickConTeclado(document.getElementById('cerrar'), () => DesactivarModoEdicion());
 
 // desactivar modo edición al pulsar Esc
@@ -213,7 +205,6 @@ configurarGiro();
 configurarEditorEsquinas();
 configurarCompartir();
 configurarDD(document.body);
-initGestures();
 AsignarWatermarkPorDefecto(Watermark);
 
 // detectar si se ha cargado la página con un hash y abrir ese details

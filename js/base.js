@@ -36,7 +36,6 @@ const DivMascaraDni = document.getElementById('DivMascaraDni');
 const Validez = document.getElementById('Validez');
 const DivValidez = document.getElementById('DivValidez');
 const botonGrabar = document.getElementById('Guardar');
-const Resetear = document.getElementById('Resetear');
 
 //////////////////////////////////////
 //
@@ -53,6 +52,9 @@ let imagenOriginalBN = null;
 
 // Las 4 esquinas del DNI sobre la imagen original, en orden: sup-izda, sup-dcha, inf-dcha, inf-izda
 let esquinasDNI = null;
+
+// Zona de imagenDNI_BN donde queda la tarjeta enderezada, que es la que se muestra como resultado
+let tarjetaResultado = null;
 
 // Nombre del fichero elegido, para generar el nombre de la copia protegida
 let nombreFichero = '';

@@ -15,10 +15,8 @@ Si quieres descargarte los ficheros para ejecutarlo desde tu ordenador, pincha e
 - `worker.js`: WebWorker que procesa la imagen (blanco y negro, detección de esquinas, enderezado y giros)
 - `js/base.js`: referencias a los elementos de la página, estado compartido y utilidades
 - `js/procesador.js`: comunicación con el WebWorker mediante promesas
-- `js/encuadre.js`: encuadre automático de la copia protegida
 - `js/editorEsquinas.js`: editor con los 4 puntos arrastrables, la lupa y los giros
-- `js/resultado.js`: redibujado de la copia protegida, máscaras de censura y marca de agua
-- `js/gestos.js`: gestos táctiles sobre la copia protegida
+- `js/resultado.js`: dibujado de la copia protegida, máscaras de censura y marca de agua
 - `js/guardar.js`: composición de la imagen final, descarga y compartir
 - `js/app.js`: flujo principal y cableado de eventos (se carga el último)
 - `test.js`: código específico de la página de pruebas

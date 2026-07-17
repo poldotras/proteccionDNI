@@ -342,18 +342,6 @@ footer {
 	fill: currentColor;
 }
 
-/* botón para deshacer los ajustes manuales, superpuesto al resultado */
-#Resetear {
-	position: absolute;
-	top: 5px;
-	left: 5px;
-	z-index: 1;
-}
-
-.Editando #Previsualizacion {
-	touch-action: none;
-}
-
 /* mostrar un indicador en los enlaces que abrir�n nueva ventana */
 a[target='_blank'] {
 	position: relative;

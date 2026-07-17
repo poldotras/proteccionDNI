@@ -19,89 +19,31 @@ function MostrarEdicion() {
 }
 
 /**
-Comenzar la edición con la imagen indicada (un <img> o un canvas)
-*/
-function EditarImagen(imagen) {
-	MostrarEdicion();
-	tarjetaResultado = null;
-
-	PrepararDNI(imagen)
-		.then(() => RedibujarDNI())
-		.catch(error => {
-			alert('Error preparando DNI \r\n' + error);
-			console.error(error)
-		});
-
-	DibujarMascara();
-	DibujarMarcaAgua();
-}
-
-/**
-Cargar el fichero elegido (imagen o pdf) y comenzar el proceso
+Cargar el fichero elegido como imagen y comenzar el proceso
 */
 function MostrarImagen(file) {
-	if (EsPdf(file)) {
-		MostrarPdf(file);
-		return;
-	}
-
 	const img = new Image;
 	img.onload = function () {
 		URL.revokeObjectURL(img.src)
-		EditarImagen(img);
+
+		MostrarEdicion();
+		tarjetaResultado = null;
+
+		PrepararDNI(img)
+			.then(() => RedibujarDNI())
+			.catch(error => {
+				alert('Error preparando DNI \r\n' + error);
+				console.error(error)
+			});
+
+		DibujarMascara();
+		DibujarMarcaAgua();
 	}
 	img.onerror = function (e) {
 		console.log(e);
 		alert('Por favor, escoge una imagen válida');
 	}
 	img.src = URL.createObjectURL(file);
-}
-
-function EsPdf(file) {
-	return file.type == 'application/pdf' || /\.pdf$/i.test(file.name);
-}
-
-// promesa de la carga de pdf.js, que solo se descarga la primera vez que se elige un pdf
-let cargaPdfJs = null;
-
-function CargarPdfJs() {
-	if (!cargaPdfJs) {
-		cargaPdfJs = new Promise(function (resolve, reject) {
-			const script = document.createElement('script');
-			script.src = 'lib/pdf.min.js';
-			script.onload = function () {
-				pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
-				resolve();
-			};
-			script.onerror = () => reject(new Error('No se ha podido cargar lib/pdf.min.js'));
-			document.body.appendChild(script);
-		});
-	}
-	return cargaPdfJs;
-}
-
-/**
-Renderizar la primera página del pdf a un canvas y editarla como una imagen normal
-*/
-function MostrarPdf(file) {
-	Promise.all([CargarPdfJs(), file.arrayBuffer()])
-		// isEvalSupported evita que pdf.js use eval con las fuentes, que el CSP no permite
-		.then(([, buffer]) => pdfjsLib.getDocument({ data: buffer, isEvalSupported: false }).promise)
-		.then(pdf => pdf.getPage(1))
-		.then(function (pagina) {
-			// renderizar con buena resolución: el procesado trabaja hasta a 2000px de ancho
-			const base = pagina.getViewport({ scale: 1 });
-			const viewport = pagina.getViewport({ scale: 2000 / base.width });
-			const canvasPdf = document.createElement('canvas');
-			canvasPdf.width = viewport.width;
-			canvasPdf.height = viewport.height;
-			return pagina.render({ canvasContext: canvasPdf.getContext('2d'), viewport }).promise
-				.then(() => EditarImagen(canvasPdf));
-		})
-		.catch(function (error) {
-			console.error(error);
-			alert('No se ha podido leer el pdf\r\n' + error);
-		});
 }
 
 /**
@@ -113,13 +55,10 @@ pasándola por un canvas. No se pierde calidad: el worker trabaja a 2000px como 
 function CrearBitmap(img) {
 	return createImageBitmap(img)
 		.catch(function () {
-			// la fuente puede ser un <img> (naturalWidth) o un canvas (width)
-			const ancho = img.naturalWidth || img.width;
-			const alto = img.naturalHeight || img.height;
-			const escala = Math.min(1, 2000 / ancho, 2000 / alto);
+			const escala = Math.min(1, 2000 / img.naturalWidth, 2000 / img.naturalHeight);
 			const canvas = document.createElement('canvas');
-			canvas.width = Math.max(1, Math.round(ancho * escala));
-			canvas.height = Math.max(1, Math.round(alto * escala));
+			canvas.width = Math.max(1, Math.round(img.naturalWidth * escala));
+			canvas.height = Math.max(1, Math.round(img.naturalHeight * escala));
 			canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
 			return createImageBitmap(canvas);
 		});

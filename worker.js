@@ -565,7 +565,7 @@ function CodigoWorker() {
 	}
 
 	// Tono mínimo de la copia protegida: los negros puros quedan como un gris oscuro
-	const NegroMinimo = 45;
+	const NegroMinimo = 35;
 
 	/**
 	* Reescalar los tonos al rango [NegroMinimo, 255] para que la copia

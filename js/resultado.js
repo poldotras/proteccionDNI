@@ -135,7 +135,8 @@ function DibujarMarcaAgua() {
 
 	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
 		const textoMarca = marca.mayusculas ? texto.toUpperCase() : texto;
-		RellenarTexto(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
+		const Rellenar = marca.estampado ? RellenarEstampado : RellenarTexto;
+		Rellenar(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
 	});
 }
 
@@ -150,6 +151,90 @@ function AsignarWatermarkPorDefecto(input) {
 
 	const hoy = new Date();
 	input.value = `Copia ${hoy.toISOString().substring(0, 10)} para ${sp.get('para')}`;
+}
+
+/**
+Anchura de cada letra del texto con la fuente indicada, usando la caché global
+*/
+function MetricasLetras(ctx, fuente, letras) {
+	let Metricas = CacheMetricas[fuente];
+	if (!Metricas) {
+		Metricas = {};
+		CacheMetricas[fuente] = Metricas;
+	}
+	// validamos que todas las letras están en nuestra caché o las añadimos
+	letras.forEach(letra => {
+		if (Metricas[letra])
+			return;
+		Metricas[letra] = ctx.measureText(letra).width;
+	});
+	return Metricas;
+}
+
+/**
+Estampado de seguridad que cubre la zona con líneas de texto onduladas y rotadas:
+empiezan a 45º arriba a la izquierda y la inclinación va aumentando hasta 70º abajo,
+manteniendo la separación con la línea anterior para que nunca se toquen
+*/
+function RellenarEstampado(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
+	ctx.font = fuente;
+	ctx.fillStyle = estilo;
+
+	const metrics = ctx.measureText('A');
+	const lineHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+	const amplitud = lineHeight * 0.22;
+	const longitudOnda = 250;
+
+	const anguloInicial = 45 * Math.PI / 180;
+	const anguloFinal = 70 * Math.PI / 180;
+	// separación perpendicular entre líneas, con hueco para la onda
+	const separacion = lineHeight + amplitud;
+
+	const letras = (texto + ' - ').split('');
+	const Metricas = MetricasLetras(ctx, fuente, letras);
+
+	// no dibujar nada fuera de la zona indicada
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(x, y, maxWidth, maxHeight);
+	ctx.clip();
+
+	// las líneas se anclan en el borde izquierdo, empezando por encima de la zona
+	// para que las primeras crucen la esquina superior derecha
+	const inicioY = y - maxWidth * Math.tan(anguloInicial);
+	const finY = y + maxHeight;
+	for (let ancla = inicioY; ancla < finY;) {
+		// la inclinación crece linealmente con la posición de la línea
+		const fraccion = (ancla - inicioY) / (finY - inicioY);
+		const angulo = anguloInicial + (anguloFinal - anguloInicial) * fraccion;
+		const coseno = Math.cos(angulo);
+		const seno = Math.sin(angulo);
+
+		ctx.save();
+		ctx.translate(x, ancla);
+		ctx.rotate(angulo);
+
+		let n = 0;
+		for (let posicion = 0; ; posicion += Metricas[letras[n]], n = (n + 1) % letras.length) {
+			// posición de la letra en coordenadas de la zona, para saber cuándo entra y sale
+			const px = posicion * coseno;
+			const py = ancla + posicion * seno;
+			if (px > maxWidth || py > finY + lineHeight)
+				break;
+			// las letras de la parte que queda por encima de la zona no hace falta dibujarlas
+			if (py < y - lineHeight)
+				continue;
+
+			const yOnda = amplitud * Math.sin(posicion * 2 * Math.PI / longitudOnda + ancla);
+			ctx.fillText(letras[n], posicion, yOnda);
+		}
+		ctx.restore();
+
+		// avance vertical que mantiene la separación perpendicular con la línea anterior
+		ancla += separacion / coseno;
+	}
+
+	ctx.restore();
 }
 
 /**
@@ -171,20 +256,7 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 
 	// Dividir el texto en letras (con un separador final para repeticiones)
 	const letras = (texto + ' - ').split('');
-
-	// Obtenemos las metricas de anchura cacheada o creamos un objeto nuevo
-	const key = fuente + estilo;
-	let Metricas = CacheMetricas[key];
-	if (!Metricas) {
-		Metricas = {};
-		CacheMetricas[key] = Metricas;
-	}
-	// validamos que todas las letras están en nuestra caché o las añadimos
-	letras.forEach(letra => {
-		if (Metricas[letra])
-			return;
-		Metricas[letra] = ctx.measureText(letra).width;
-	});
+	const Metricas = MetricasLetras(ctx, fuente, letras);
 
 	// bucle hasta rellenar toda la zona, vamos letra a letra
 	let n = 0;

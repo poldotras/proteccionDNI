@@ -1,7 +1,8 @@
 ﻿// Conjunto con objetos que definen los datos para cada formato de DNI
 // .Mascaras: los rectángulos a ocultar con negro
 // .Watermarks: array de objetos que definen fuente, estilo y rectángulo a rellenar con el watermark elegido
-//   (con mayusculas: true el texto se escribe en mayúsculas, como la zona de lectura mecánica del DNI)
+//   (con mayusculas: true el texto se escribe en mayúsculas, como la zona de lectura mecánica del DNI;
+//   con estampado: true se rellena con las líneas rotadas de RellenarEstampado en vez de líneas horizontales)
 const FormatosDnis = {
 	'-': {
 		Nombre: ' ', // Sin máscara
@@ -11,6 +12,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},
@@ -40,6 +42,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},
@@ -56,6 +59,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},
@@ -84,6 +88,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},
@@ -100,6 +105,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},
@@ -122,6 +128,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},
@@ -137,6 +144,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
+			estampado: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
 	},

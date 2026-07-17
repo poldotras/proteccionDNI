@@ -8,8 +8,8 @@ const FormatosDnis = {
 		Mascaras: [
 		],
 		Watermarks: [{
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -37,8 +37,8 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 45%)',
 			bb: { x: 10, y: 190, w: 360, h: 490 }
 		}, {
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -53,8 +53,8 @@ const FormatosDnis = {
 			{ x: 20, y: 395, w: 960, h: 130 }, // Inferior
 		],
 		Watermarks: [{
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -81,8 +81,8 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 45%)',
 			bb: { x: 10, y: 140, w: 350, h: 460 }
 		}, {
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -97,8 +97,8 @@ const FormatosDnis = {
 			{ x: 20, y: 410, w: 960, h: 130 }, // Inferior
 		],
 		Watermarks: [{
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -119,8 +119,8 @@ const FormatosDnis = {
 			estilo: 'rgb(0 0 0 / 45%)',
 			bb: { x: 700, y: 340, w: 290, h: 310 }
 		}, {
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -134,8 +134,8 @@ const FormatosDnis = {
 			{ x: 20, y: 410, w: 960, h: 120 }, // Inferior
 		],
 		Watermarks: [{
-			fuente: "13px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 30%)',
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 50%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]

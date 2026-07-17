@@ -13,6 +13,7 @@ const ScriptsEditor = [
 	'js/editorEsquinas.js',
 	'js/resultado.js',
 	'js/guardar.js',
+	'js/pdf.js',
 	'js/app.js',
 ];
 
@@ -65,18 +66,11 @@ function CambiarImagenTest(ev) {
 
 	nombreFichero = img.src;
 
-	MostrarEdicion();
-	tarjetaResultado = null;
-
 	// si el nombre coincide con el de un formato, seleccionarlo automáticamente
 	const match = /ejemplos\/(.*)\.webp/.exec(img.src);
 	if (match) {
 		ActualizarValorInput(Formato, match[1]);
 	}
 
-	PrepararDNI(img)
-		.then(() => RedibujarDNI());
-
-	DibujarMascara();
-	DibujarMarcaAgua();
+	EditarImagen(img);
 }

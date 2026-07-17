@@ -22,6 +22,7 @@ Si quieres descargarte los ficheros para ejecutarlo desde tu ordenador, pincha e
 - `js/resultado.js`: dibujado de la copia protegida, máscaras de censura y marca de agua
 - `js/guardar.js`: composición de la imagen final, descarga y compartir
 - `js/app.js`: flujo principal y cableado de eventos (se carga el último)
+- `js/pdf.js`: extracción de la imagen incrustada en un pdf (escaneos y fotos guardadas como pdf), sin librerías externas
 - `test.js`: código de la página de pruebas: descarga e inyecta el editor y activa la galería
 
 Icono de máscara creado por [Andrew Nenakhov](https://pictogrammers.com/library/mdi/icon/domino-mask/).  

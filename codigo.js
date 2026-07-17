@@ -511,8 +511,7 @@ function CrearProcesador() {
 	}
 
 	try {
-		// la versión evita que una caché sirva un worker antiguo con el resto del código nuevo
-		return new Worker('worker.js?v=20260717');
+		return new Worker('worker.js');
 	} catch (e) {
 		console.log(e);
 		alert('Error creando WebWorker\r\n' + e);

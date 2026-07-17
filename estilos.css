@@ -47,19 +47,6 @@ select {
 	font-size: 100%;
 }
 
-#pasos summary {
-	display: none;
-}
-
-#pasos details > div {
-	padding: 0 1em 1em;
-}
-
-#pasos details[open] > div {
-	border: 1px solid #BBB;
-	margin: 10px 0;
-}
-
 #DivFichero {
 	height: 0;
 }
@@ -115,12 +102,6 @@ select {
 
 .centrado input {
 	padding: .3em 2.3em;
-}
-
-.Siguiente {
-	margin-top: 1em;
-	display: flex;
-	justify-content: space-between;
 }
 
 #AyudaOcultarNumeroSoporte,
@@ -209,64 +190,6 @@ footer {
 	margin-top: 1em;
 	font-size: 80%;
 }
-
-.wizard-progress {
-	display: flex;
-	min-height: 60px;
-}
-
-.node,
-.step-name {
-	cursor: pointer;
-}
-
-.step {
-	text-align: center;
-	position: relative;
-	flex: 1;
-}
-
-.step:not(:last-child):before {
-	content: '';
-	display: block;
-	position: absolute;
-	left: 50%;
-	top: 33px;
-	background-color: var(--baseColor);
-	height: 5px;
-	width: 100%;
-}
-
-.node {
-	border: 4px solid var(--baseColor);
-	background-color: var(--baseColor);
-	border-radius: 50%;
-	width: 14px;
-	aspect-ratio: 1;
-	position: absolute;
-	top: 24px;
-	left: 50%;
-	margin-left: -12px;
-}
-
-.step.complete:before {
-	background-color: var(--mainColor);
-}
-
-.complete .node {
-	border-color: var(--mainColor);
-	background-color: var(--mainColor);
-}
-
-.step.in-progress:before {
-	background-image: linear-gradient(to right, var(--mainColor) 0%, var(--baseColor) 100%);
-}
-
-.in-progress .node {
-	border-color: var(--mainColor);
-	background-color: var(--colorActivo);
-}
-
 
 .dragover {
 	position: relative;
@@ -362,15 +285,6 @@ footer {
 	background-color: rgba(49 132 253 / .5);
 }
 
-.atras svg {
-	margin-left: 0;
-	margin-right: 10px;
-}
-
-.Siguiente .btn span {
-	padding: 6px 12px;
-}
-
 #cerrar {
 	position: absolute;
 	right: 5px;
@@ -455,11 +369,11 @@ footer {
 	gap: 5px;
 }
 
-body.Editando:where(.EnPaso3, .EnPaso4) #Previsualizacion {
+.Editando #Previsualizacion {
 	touch-action: none;
 }
 
-body.Editando:where(.EnPaso3, .EnPaso4) #ControlesPosicion {
+.Editando #ControlesPosicion {
 	display: flex;
 }
 
@@ -508,12 +422,16 @@ body.Editando:where(.EnPaso3, .EnPaso4) #ControlesPosicion {
 	width: 100vw;
 }
 
-.EnZoom details {
+.EnZoom #OpcionesEdicion,
+.EnZoom #PanelOriginal,
+.EnZoom #ZonaElegir,
+.EnZoom #ZonaGuardar,
+.EnZoom .TituloVista {
 	display: none;
 }
 
-.EnZoom .wizard-progress {
-	display: none;
+.EnZoom #Vistas {
+	display: block;
 }
 
 .EnZoom #pasos {
@@ -580,16 +498,42 @@ a[href^='#'] {
 	}
 }
 
-/* Editor de esquinas del paso Posición: los 4 puntos arrastrables con la miniatura del resultado */
-#EditorEsquinas {
-	display: none;
-	position: absolute;
-	inset: 0;
-	z-index: 1;
+/* Edición en una sola vista: panel original con las 4 esquinas y panel con la copia protegida */
+#Vistas {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	margin: 10px 0;
 }
 
-.EnVistaOriginal #EditorEsquinas {
+#Vistas > div {
+	flex: 1;
+	min-width: 0;
+}
+
+.TituloVista {
+	font-weight: bold;
+	margin: .6em 0 .3em;
+}
+
+@media (max-width: 700px) {
+	#Vistas {
+		flex-direction: column;
+	}
+
+	#Vistas > div {
+		width: 100%;
+	}
+}
+
+#EditorEsquinas {
+	position: relative;
+	aspect-ratio: 1000 / 625;
+}
+
+#EditorEsquinas canvas {
 	display: block;
+	width: 100%;
 }
 
 #MarcoEsquinas {
@@ -598,16 +542,6 @@ a[href^='#'] {
 	width: 100%;
 	height: 100%;
 	touch-action: none;
-}
-
-/* miniatura con el resultado enderezado, como la vista previa de una presentación */
-#Previsualizacion #canvasMiniatura {
-	left: auto;
-	right: 0;
-	width: 34%;
-	border: 1px solid #888;
-	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .3);
-	box-sizing: border-box;
 }
 
 #PoligonoEsquinas {
@@ -628,15 +562,7 @@ a[href^='#'] {
 	stroke-width: 3;
 }
 
-body.EnVistaOriginal #ControlesPosicion {
-	display: none;
-}
 
-/* en el editor de esquinas el botón de ampliar se pasa a la izquierda para no tapar la miniatura */
-body.EnVistaOriginal #ControlesPantalla {
-	right: auto;
-	left: 0;
-}
 
 /* zona ampliada alrededor de cada esquina para poder arrastrarla bien con el dedo */
 .ZonaToque {

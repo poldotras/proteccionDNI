@@ -107,9 +107,7 @@ SelectorFichero.addEventListener('change', function (e) {
 });
 
 // botón "bonito" para el usuario
-//document.getElementById('ElegirFoto')
-//	.addEventListener('click', () => SelectorFichero.click());
-document.querySelector('#paso1 p')
+document.getElementById('ZonaElegir')
 	.addEventListener('click', (ev) => {
 		SelectorFichero.click();
 	});
@@ -121,7 +119,6 @@ document.querySelector('#paso1 p')
 			const formato = FormatosDnis[Formato.value];
 			DivMascaraDni.classList.toggle('Oculto', !formato.MascarasDni);
 			DivValidez.classList.toggle('Oculto', !formato.DatosValidez);
-			CambiarEstadoBoton('4', true);
 		}
 
 		DibujarMascara();
@@ -138,23 +135,17 @@ document.querySelector('#paso1 p')
 
 Watermark.addEventListener('input', function (e) {
 	DibujarMarcaAgua();
-	CambiarEstadoBoton('2', true);
 });
 
 // Al hacer click guardarla
 const botonGrabar = document.getElementById('Guardar');
 botonGrabar.addEventListener('click', GrabarImagen);
-botonGrabar.disabled = true;
 
 configurarDobleClickComoReset('#ControlesDesplazamiento');
 configurarGiro();
 configurarEditorEsquinas();
 
 AsignarWatermarkPorDefecto(Watermark);
-
-configurarCrearComposicion();
-
-configurarWizard();
 
 configurarDD(document.body);
 
@@ -261,18 +252,9 @@ activarClickConTeclado(Resetear, () => {
 //
 //////////////////////////////////////
 
-/**
- * Cambiamos el estado de BotonPrincipal en el botón indicado
- * @param {any} selector
- * @param {any} paso
- */
-function CambiarEstadoBoton(paso, valido) {
-	document.querySelector('#paso' + paso + ' .adelante')
-		.classList.toggle('BotonPrincipal', valido);
-}
-
 function ActivarModoEdicion() {
 	document.body.classList.add('Editando');
+	document.getElementById('Edicion').classList.remove('Oculto');
 	// Que no se salga el teclado a elementos no visibles
 	querySelector_Array('.informacion, footer')
 		.forEach(bloque => bloque.inert = true);
@@ -317,108 +299,6 @@ function activarClickConTeclado(elmto, callback) {
 			callback(ev.currentTarget, ev);
 	});
 	elmto.addEventListener('click', ev => callback(ev.currentTarget, ev));
-}
-
-function configurarWizard() {
-	querySelector_Array('.step-name')
-		.forEach(elmto => {
-			activarClickConTeclado(elmto, target => activarWizard(target.parentNode))
-		});
-
-	querySelector_Array('.step > .node')
-		.forEach(elmto => elmto.addEventListener('click', function (ev) {
-			activarWizard(ev.target.parentNode);
-		})
-		);
-
-	querySelector_Array('.Siguiente button')
-		.forEach(btn => btn.addEventListener('click', function (ev) {
-			const siguiente = ev.currentTarget.dataset.siguiente;
-			activarWizard(document.getElementById('step' + siguiente));
-		})
-		);
-}
-
-let pasoActual = '1';
-
-function activarWizard(step) {
-	ActivarModoEdicion();
-
-	const paso = step.id.substr(4); // ej: step4
-	if (paso == pasoActual) {
-		if (paso == '1')
-			SelectorFichero.click();
-
-		return;
-	}
-
-	if (!imagenDNI_BN) {
-		alert('Escoje primero la imagen de tu DNI');
-		return;
-	}
-
-	const actual = document.querySelector('.in-progress');
-	actual.classList.remove('in-progress');
-	document.getElementById('paso' + pasoActual).open = false;
-
-	step.classList.add('in-progress');
-	document.getElementById('paso' + paso).open = true;
-
-	document.body.classList.remove('EnPaso' + pasoActual);
-	pasoActual = paso;
-	document.body.classList.add('EnPaso' + pasoActual);
-	AjustarVistaPosicion();
-
-	let siguiente = step;
-	while (siguiente) {
-		siguiente.classList.remove('complete');
-		siguiente = siguiente.nextElementSibling;
-	}
-	let anterior = step.previousElementSibling;
-	while (anterior) {
-		anterior.classList.add('complete');
-		anterior = anterior.previousElementSibling;
-	}
-
-	setTimeout(() => activarElementoWizard(paso), 50);
-}
-
-/**
-	Poner el foco en el elemento adecuado al pasar en cada elemento del wizard
-*/
-function activarElementoWizard(paso) {
-	switch (paso) {
-		//		case '1':
-		//			SelectorFichero.click();
-		//			break;
-
-		case '2':
-			Watermark.focus();
-			break;
-
-		case '3':
-			MarcoEsquinas.focus();
-			break;
-
-		case '4':
-			Formato.focus();
-			break;
-
-		case '5':
-			botonGrabar.focus();
-			break;
-
-	}
-}
-
-function configurarCrearComposicion() {
-	// Al activar el paso de Grabar, crear la imagen offscreen con la mezcla de los tres canvas
-	document.getElementById('paso5')
-		.addEventListener('toggle', function (ev) {
-			if (ev.target.hasAttribute('open')) {
-				ComponerImagen();
-			}
-		});
 }
 
 function AsignarWatermarkPorDefecto(input) {
@@ -473,7 +353,7 @@ function MostrarImagen(file) {
 	img.onload = function () {
 		URL.revokeObjectURL(img.src)
 
-		CambiarEstadoBoton('4', false);
+		ActivarModoEdicion();
 		posicionAutomatica = null;
 		ResetearControles();
 		AjustarVisibilidadResetear();
@@ -481,7 +361,6 @@ function MostrarImagen(file) {
 		PrepararDNI(img)
 			.then(() => {
 				RedibujarDNI();
-				activarWizard(document.getElementById('step2'));
 			})
 			.catch(error => {
 				alert('Error preparando DNI \r\n' + error);
@@ -707,7 +586,7 @@ function AsignarValorAmpliandoRango(input, valor) {
 
 //////////////////////////////////////
 //
-// Editor de esquinas del paso Posición
+// Editor de esquinas sobre la imagen original
 //
 //////////////////////////////////////
 
@@ -743,9 +622,6 @@ function EsConvexo(esquinas) {
 // escala y desplazamiento con los que se muestra la imagen original dentro del editor de esquinas
 let transformacionEditor = { escala: 1, x: 0, y: 0 };
 
-// la zona de selección deja libre la parte derecha, donde arriba se coloca la miniatura del resultado
-const ZonaEditor = { w: 645, h: 625 };
-
 /**
 Dibujar la imagen original en el editor y colocar el marco con las 4 esquinas
 */
@@ -757,11 +633,11 @@ function DibujarEditorEsquinas() {
 	ctx.fillStyle = 'white';
 	ctx.fillRect(0, 0, canvasOriginal.width, canvasOriginal.height);
 
-	const escala = Math.min(ZonaEditor.w / imagenOriginalBN.width, ZonaEditor.h / imagenOriginalBN.height);
+	const escala = Math.min(canvasOriginal.width / imagenOriginalBN.width, canvasOriginal.height / imagenOriginalBN.height);
 	transformacionEditor = {
 		escala,
-		x: (ZonaEditor.w - imagenOriginalBN.width * escala) / 2,
-		y: (ZonaEditor.h - imagenOriginalBN.height * escala) / 2,
+		x: (canvasOriginal.width - imagenOriginalBN.width * escala) / 2,
+		y: (canvasOriginal.height - imagenOriginalBN.height * escala) / 2,
 	};
 	ctx.drawImage(imagenOriginalBN, transformacionEditor.x, transformacionEditor.y, imagenOriginalBN.width * escala, imagenOriginalBN.height * escala);
 
@@ -836,32 +712,6 @@ function configurarEditorEsquinas() {
 	}
 	MarcoEsquinas.addEventListener('pointerup', soltar);
 	MarcoEsquinas.addEventListener('pointercancel', soltar);
-}
-
-/**
-El editor de esquinas se muestra dentro del paso de posición, con la miniatura del resultado enderezado
-*/
-function AjustarVistaPosicion() {
-	const enEditor = pasoActual == '3';
-	document.body.classList.toggle('EnVistaOriginal', enEditor);
-	if (enEditor) {
-		DibujarEditorEsquinas();
-		ActualizarMiniatura();
-	}
-}
-
-const canvasMiniatura = document.getElementById('canvasMiniatura');
-
-/**
-Actualizar la miniatura con la composición actual: imagen enderezada, máscaras y texto
-*/
-function ActualizarMiniatura() {
-	const ctx = canvasMiniatura.getContext('2d', { alpha: false });
-	ctx.fillStyle = 'white';
-	ctx.fillRect(0, 0, canvasMiniatura.width, canvasMiniatura.height);
-	ctx.drawImage(canvas, 0, 0);
-	ctx.drawImage(canvasMascara, 0, 0);
-	ctx.drawImage(canvasWatermark, 0, 0);
 }
 
 /**
@@ -985,8 +835,6 @@ function RedibujarEnDNIEnRAF() {
 	// volcar Imagen DNI escalada y con desplazamiento
 	const aspectRatio = canvasOrigen.height / canvasOrigen.width;
 	ctx.drawImage(canvasOrigen, Horizontal.value, Vertical.value, canvas.width * Zoom.value, canvas.width * Zoom.value * aspectRatio);
-
-	ActualizarMiniatura();
 }
 
 /** Ocultar las partes de la imagen que no hacen ninguna falta, dependerá del formato de DNI y el lado */
@@ -1025,8 +873,6 @@ function DibujarMascara() {
 			ctx.fillText('**', bloque.x, bloque.y + bloque.h + 20);
 		}
 	}
-
-	ActualizarMiniatura();
 }
 
 /**
@@ -1037,17 +883,13 @@ function DibujarMarcaAgua() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	const texto = Watermark.value;
 	// Si ha borrado todo el texto, no escribir nada
-	if (!texto) {
-		ActualizarMiniatura();
+	if (!texto)
 		return;
-	}
 
 	const marcas = FormatosDnis[Formato.value].Watermarks;
 	marcas.forEach(marca => {
 		RellenarTexto(texto, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
 	});
-
-	ActualizarMiniatura();
 }
 
 /**
@@ -1150,6 +992,8 @@ function GenerarNombreFichero() {
 }
 
 function GrabarImagen() {
+	ComponerImagen();
+
 	const link = document.getElementById('grabar');
 	link.download = GenerarNombreFichero();
 	try {
@@ -1254,6 +1098,8 @@ function configurarCompartir() {
 	}
 
 	btnCompartir.addEventListener('click', async () => {
+		ComponerImagen();
+
 		let dataUrl;
 		try {
 			dataUrl = canvaComposicion.toDataURL('image/jpeg', 0.8);
@@ -1334,14 +1180,6 @@ function initGestures() {
 }
 
 function pointerdownHandler(ev) {
-	// mover/ ajustar la imagen solo en los pasos de posición y tipo
-	if (pasoActual != '3' && pasoActual != '4')
-		return;
-
-	// en la vista original los toques son para el editor de esquinas
-	if (document.body.classList.contains('EnVistaOriginal'))
-		return;
-
 	// The pointerdown event signals the start of a touch interaction.
 	// This event is cached to support 2-finger gestures
 	evCache.push(ev);

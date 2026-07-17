@@ -46,12 +46,10 @@ function CambiarImagenTest(ev) {
 		DibujarEditorEsquinas();
 
 		RedibujarDNI();
-		activarWizard(document.getElementById('step2'));
 	} else {
 		PrepararDNI(img)
 			.then(() => {
 				RedibujarDNI();
-				activarWizard(document.getElementById('step2'));
 			});
 	}
 

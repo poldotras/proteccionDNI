@@ -134,18 +134,22 @@ function DibujarMarcaAgua() {
 		return;
 
 	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
-		RellenarTexto(texto, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
+		const textoMarca = marca.mayusculas ? texto.toUpperCase() : texto;
+		RellenarTexto(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
 	});
 }
 
 /**
-Poner el texto de la marca de agua por defecto, con la fecha actual y el parámetro "para" si existe
+Rellenar la finalidad con la fecha actual y el parámetro "para" si viene en la URL;
+sin él, el campo queda vacío mostrando el ejemplo del placeholder
 */
 function AsignarWatermarkPorDefecto(input) {
-	const hoy = new Date();
 	const sp = new URLSearchParams(location.search)
-	const sufijo = sp.has('para') ? sp.get('para') : '…';
-	input.value = `Copia ${hoy.toISOString().substring(0, 10)} para ${sufijo}`;
+	if (!sp.has('para'))
+		return;
+
+	const hoy = new Date();
+	input.value = `Copia ${hoy.toISOString().substring(0, 10)} para ${sp.get('para')}`;
 }
 
 /**

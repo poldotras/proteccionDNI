@@ -569,3 +569,16 @@ a[href^='#'] {
 	fill: transparent;
 	stroke: none;
 }
+
+/* lupa que amplía la zona de la esquina mientras se arrastra un punto */
+#EditorEsquinas #Lupa {
+	display: none;
+	position: absolute;
+	width: 30%;
+	border: 3px solid var(--colorFondoBotonPrincipal);
+	border-radius: 50%;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+	pointer-events: none;
+	background: #FFF;
+	z-index: 2;
+}

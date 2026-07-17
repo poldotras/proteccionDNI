@@ -67,6 +67,7 @@ const EditorEsquinas = document.getElementById('EditorEsquinas');
 const canvasOriginal = document.getElementById('canvasOriginal');
 const MarcoEsquinas = document.getElementById('MarcoEsquinas');
 const PoligonoEsquinas = document.getElementById('PoligonoEsquinas');
+const Lupa = document.getElementById('Lupa');
 
 const SelectorFichero = document.getElementById('SelectorFichero');
 const Formato = document.getElementById('Formato');
@@ -669,7 +670,8 @@ function ActualizarMarcoEsquinas() {
 }
 
 /**
-Permitir arrastrar las 4 esquinas con ratón o dedo; al soltar se endereza la imagen
+Permitir arrastrar las 4 esquinas con ratón o dedo; al soltar se endereza la imagen.
+Mientras se arrastra se muestra una lupa para colocar el punto con precisión.
 */
 function configurarEditorEsquinas() {
 	let indiceArrastre = null;
@@ -681,6 +683,8 @@ function configurarEditorEsquinas() {
 
 		indiceArrastre = parseInt(esquina.dataset.indice, 10);
 		MarcoEsquinas.setPointerCapture(ev.pointerId);
+		Lupa.style.display = 'block';
+		ActualizarLupa(indiceArrastre);
 		ev.stopPropagation();
 		ev.preventDefault();
 	});
@@ -699,6 +703,7 @@ function configurarEditorEsquinas() {
 			y: Math.min(Math.max((y - transformacionEditor.y) / transformacionEditor.escala, 0), imagenOriginalBN.height),
 		};
 		ActualizarMarcoEsquinas();
+		ActualizarLupa(indiceArrastre);
 		ev.stopPropagation();
 	});
 
@@ -707,11 +712,74 @@ function configurarEditorEsquinas() {
 			return;
 
 		indiceArrastre = null;
+		Lupa.style.display = '';
 		SolicitarEnderezado();
 		ev.stopPropagation();
 	}
 	MarcoEsquinas.addEventListener('pointerup', soltar);
 	MarcoEsquinas.addEventListener('pointercancel', soltar);
+}
+
+/**
+Dibujar en la lupa la zona ampliada alrededor de la esquina que se está arrastrando,
+con una cruz en el centro y las líneas del marco hacia las esquinas vecinas,
+y colocarla junto al punto sin taparlo ni salirse del editor
+*/
+function ActualizarLupa(indice) {
+	const punto = esquinasDNI[indice];
+	const centro = Lupa.width / 2;
+
+	// zona de la imagen original que se amplía, proporcional a su tamaño
+	const lado = Math.max(80, Math.round(imagenOriginalBN.width * 0.08));
+	const ampliacion = Lupa.width / lado;
+
+	const ctx = Lupa.getContext('2d', { alpha: false });
+	ctx.fillStyle = 'white';
+	ctx.fillRect(0, 0, Lupa.width, Lupa.height);
+	ctx.drawImage(imagenOriginalBN, punto.x - lado / 2, punto.y - lado / 2, lado, lado, 0, 0, Lupa.width, Lupa.height);
+
+	// líneas del marco hacia las dos esquinas vecinas, para poder alinear con los bordes
+	ctx.strokeStyle = 'rgb(13 110 253 / .8)';
+	ctx.lineWidth = 3;
+	[1, 3].forEach(function (salto) {
+		const vecino = esquinasDNI[(indice + salto) % 4];
+		ctx.beginPath();
+		ctx.moveTo(centro, centro);
+		ctx.lineTo(centro + (vecino.x - punto.x) * ampliacion, centro + (vecino.y - punto.y) * ampliacion);
+		ctx.stroke();
+	});
+
+	// cruz de precisión en el centro
+	ctx.strokeStyle = '#DC1E1E';
+	ctx.lineWidth = 2;
+	ctx.beginPath();
+	ctx.moveTo(centro - 22, centro);
+	ctx.lineTo(centro - 6, centro);
+	ctx.moveTo(centro + 6, centro);
+	ctx.lineTo(centro + 22, centro);
+	ctx.moveTo(centro, centro - 22);
+	ctx.lineTo(centro, centro - 6);
+	ctx.moveTo(centro, centro + 6);
+	ctx.lineTo(centro, centro + 22);
+	ctx.stroke();
+	ctx.beginPath();
+	ctx.arc(centro, centro, 6, 0, 2 * Math.PI);
+	ctx.stroke();
+
+	// colocar la lupa por encima del punto (o por debajo si no cabe), sin salirse del editor
+	const anchoPct = 30; // debe coincidir con la anchura definida en el CSS
+	const altoPct = anchoPct * canvasOriginal.width / canvasOriginal.height;
+	const pe = EsquinaAEditor(punto);
+
+	let izquierda = pe.x / canvasOriginal.width * 100 - anchoPct / 2;
+	izquierda = Math.min(Math.max(izquierda, 0), 100 - anchoPct);
+
+	let arriba = pe.y / canvasOriginal.height * 100 - altoPct - 8;
+	if (arriba < 0)
+		arriba = pe.y / canvasOriginal.height * 100 + 12;
+
+	Lupa.style.left = izquierda + '%';
+	Lupa.style.top = arriba + '%';
 }
 
 /**

@@ -7,6 +7,22 @@ Todo el procesamiento se hace mediante javascript en tu ordenador/teléfono, no 
 Puedes [probarlo aquí](https://protegemidni.es/).  
 Si quieres descargarte los ficheros para ejecutarlo desde tu ordenador, pincha en [Releases](https://github.com/AlfonsoML/proteccionDNI/releases) y bájate de ahí el último zip, lo descomprimes y abres el index.html 
 
+## Estructura del código
+
+- `index.html` / `test.html`: la página principal y la página de pruebas con DNIs de ejemplo
+- `estilos.css`: los estilos de ambas páginas
+- `formatos.js`: definición de los formatos de DNI (zonas a ocultar y de marca de agua)
+- `worker.js`: WebWorker que procesa la imagen (blanco y negro, detección de esquinas, enderezado y giros)
+- `js/base.js`: referencias a los elementos de la página, estado compartido y utilidades
+- `js/procesador.js`: comunicación con el WebWorker mediante promesas
+- `js/encuadre.js`: encuadre automático de la copia protegida
+- `js/editorEsquinas.js`: editor con los 4 puntos arrastrables, la lupa y los giros
+- `js/resultado.js`: redibujado de la copia protegida, máscaras de censura y marca de agua
+- `js/gestos.js`: gestos táctiles sobre la copia protegida
+- `js/guardar.js`: composición de la imagen final, descarga y compartir
+- `js/app.js`: flujo principal y cableado de eventos (se carga el último)
+- `test.js`: código específico de la página de pruebas
+
 Icono de máscara creado por [Andrew Nenakhov](https://pictogrammers.com/library/mdi/icon/domino-mask/).  
 Icono candado para Web App por [Dios Campechano](https://mastodon.social/@Dios_Campechano@tkz.one/114094705033755223).  
 

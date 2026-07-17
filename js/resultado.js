@@ -135,8 +135,7 @@ function DibujarMarcaAgua() {
 
 	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
 		const textoMarca = marca.mayusculas ? texto.toUpperCase() : texto;
-		const Rellenar = marca.estampado ? RellenarEstampado : RellenarTexto;
-		Rellenar(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h);
+		RellenarTexto(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h, marca.angulo);
 	});
 }
 
@@ -172,35 +171,28 @@ function MetricasLetras(ctx, fuente, letras) {
 }
 
 /**
-Estampado de seguridad: el relleno ondulado de siempre pero con todo el texto rotado -45º.
-Se rellena una zona ampliada que, una vez girada, cubre toda la zona pedida,
-y un clip evita dibujar nada fuera de ella
-*/
-function RellenarEstampado(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
-	const angulo = -45 * Math.PI / 180;
-
-	ctx.save();
-	ctx.beginPath();
-	ctx.rect(x, y, maxWidth, maxHeight);
-	ctx.clip();
-
-	// rotar alrededor del centro de la zona
-	ctx.translate(x + maxWidth / 2, y + maxHeight / 2);
-	ctx.rotate(angulo);
-
-	// cuadrado del tamaño de la diagonal, que rotado sigue tapando la zona entera
-	const lado = Math.hypot(maxWidth, maxHeight);
-	RellenarTexto(texto, ctx, fuente, estilo, -lado / 2, -lado / 2, lado, lado);
-
-	ctx.restore();
-}
-
-/**
 Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar.
 Cada letra se desplaza verticalmente siguiendo una onda, lo que dificulta
-borrar la marca de agua de forma automática y le da un aspecto distintivo
+borrar la marca de agua de forma automática y le da un aspecto distintivo.
+Si se indica un ángulo (en grados), todo el texto se dibuja rotado sin salirse de la zona
 */
-function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
+function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight, angulo) {
+	if (angulo) {
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(x, y, maxWidth, maxHeight);
+		ctx.clip();
+
+		// rotar alrededor del centro y rellenar un cuadrado del tamaño de la diagonal,
+		// que una vez girado sigue tapando la zona entera
+		ctx.translate(x + maxWidth / 2, y + maxHeight / 2);
+		ctx.rotate(angulo * Math.PI / 180);
+		const lado = Math.hypot(maxWidth, maxHeight);
+		RellenarTexto(texto, ctx, fuente, estilo, -lado / 2, -lado / 2, lado, lado);
+
+		ctx.restore();
+		return;
+	}
 	ctx.font = fuente;
 	ctx.fillStyle = estilo;
 

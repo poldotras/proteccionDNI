@@ -149,7 +149,9 @@ function AsignarWatermarkPorDefecto(input) {
 }
 
 /**
-Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar
+Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar.
+Cada letra se desplaza verticalmente siguiendo una onda, lo que dificulta
+borrar la marca de agua de forma automática y le da un aspecto distintivo
 */
 function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 	ctx.font = fuente;
@@ -158,7 +160,10 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 	// Calcular altura de linea con la fuente actual
 	const metrics = ctx.measureText('A');
 	const lineHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
-	const yMax = y + maxHeight - lineHeight;
+	// parámetros de la onda: cuánto sube/baja cada letra y cada cuántos píxeles se repite
+	const amplitud = lineHeight * 0.22;
+	const longitudOnda = 250;
+	const yMax = y + maxHeight - lineHeight - amplitud;
 
 	// Dividir el texto en letras (con un separador final para repeticiones)
 	const letras = (texto + ' - ').split('');
@@ -177,8 +182,6 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 		Metricas[letra] = ctx.measureText(letra).width;
 	});
 
-	let line = ''; // Linea que vamos a escribir
-
 	// bucle hasta rellenar toda la zona, vamos letra a letra
 	let n = 0;
 	let ancho = 0;
@@ -186,26 +189,23 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
 		const letra = letras[n];
 		// Medir la anchura que tendrá si añadimos esta letra
 		const anchoLetra = Metricas[letra];
-		const testWidth = ancho + anchoLetra;
-		// If the width of this test line is more than the max width
-		if (testWidth > maxWidth && n > 0) {
-			// escribir el texto
-			ctx.fillText(line, x, y);
-			// Nos movemos abajo según la altura calculada
+		// Si no cabe en la linea, bajamos a la siguiente y la letra se escribe allí
+		if (ancho + anchoLetra > maxWidth && ancho > 0) {
 			y += lineHeight;
 			// cuando superemos el límite vertical paramos
 			if (y >= yMax)
 				return;
 
-			// Comenzamos una linea nueva con esta letra
-			line = letra;
 			ancho = 0;
-		} else {
-			// Si no hemos superado la anchura, la añadimos a la linea actual
-			line += letra;
-			ancho += anchoLetra;
+			continue;
 		}
-		// cuando llegamos al final, reseteamos para volver
+
+		// la onda avanza con la posición horizontal y se desfasa en cada linea
+		const yOnda = y + amplitud * Math.sin((ancho * 2 * Math.PI) / longitudOnda + y);
+		ctx.fillText(letra, x + ancho, yOnda);
+		ancho += anchoLetra;
+
+		// cuando llegamos al final del texto, reseteamos para volver a empezar
 		if (n === letras.length - 1)
 			n = 0;
 		else

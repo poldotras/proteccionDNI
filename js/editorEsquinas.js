@@ -51,13 +51,14 @@ function DibujarEditorEsquinas() {
 	ctx.fillStyle = 'white';
 	ctx.fillRect(0, 0, canvasOriginal.width, canvasOriginal.height);
 
-	const escala = Math.min(canvasOriginal.width / imagenOriginalBN.width, canvasOriginal.height / imagenOriginalBN.height);
+	const imagen = imagenOriginalColor || imagenOriginalBN;
+	const escala = Math.min(canvasOriginal.width / imagen.width, canvasOriginal.height / imagen.height);
 	transformacionEditor = {
 		escala,
-		x: (canvasOriginal.width - imagenOriginalBN.width * escala) / 2,
-		y: (canvasOriginal.height - imagenOriginalBN.height * escala) / 2,
+		x: (canvasOriginal.width - imagen.width * escala) / 2,
+		y: (canvasOriginal.height - imagen.height * escala) / 2,
 	};
-	ctx.drawImage(imagenOriginalBN, transformacionEditor.x, transformacionEditor.y, imagenOriginalBN.width * escala, imagenOriginalBN.height * escala);
+	ctx.drawImage(imagen, transformacionEditor.x, transformacionEditor.y, imagen.width * escala, imagen.height * escala);
 
 	ActualizarMarcoEsquinas();
 }
@@ -156,7 +157,7 @@ function ActualizarLupa(indice) {
 	const ctx = Lupa.getContext('2d', { alpha: false });
 	ctx.fillStyle = 'white';
 	ctx.fillRect(0, 0, Lupa.width, Lupa.height);
-	ctx.drawImage(imagenOriginalBN, punto.x - lado / 2, punto.y - lado / 2, lado, lado, 0, 0, Lupa.width, Lupa.height);
+	ctx.drawImage(imagenOriginalColor || imagenOriginalBN, punto.x - lado / 2, punto.y - lado / 2, lado, lado, 0, 0, Lupa.width, Lupa.height);
 
 	// líneas del marco hacia las dos esquinas vecinas, para poder alinear con los bordes
 	ctx.strokeStyle = 'rgb(13 110 253 / .8)';
@@ -262,6 +263,7 @@ function girarDNI(ev) {
 			const anchoPrevio = imagenOriginalBN.width;
 			const altoPrevio = imagenOriginalBN.height;
 			imagenOriginalBN = respuesta.bitmap;
+			imagenOriginalColor = respuesta.bitmapColor || respuesta.bitmap;
 
 			// girar también las esquinas, desplazando su orden para que
 			// el punto 0 siga siendo el de arriba a la izquierda

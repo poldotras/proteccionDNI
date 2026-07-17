@@ -568,19 +568,30 @@ function CodigoWorker() {
 	// de nuevo cada vez que se ajusten las esquinas sin reprocesarlo todo
 	let imagenGris = null;
 
+	// La misma imagen en color, para mostrarla en el editor de esquinas
+	let imagenColor = null;
+
 	/**
 	* Procesar una foto nueva: girar si está en vertical, pasar a blanco y negro
 	* y detectar las esquinas del DNI. No endereza; eso se pide en un mensaje aparte.
+	* Devuelve el bitmap en blanco y negro y otro en color para el editor de esquinas.
 	*/
 	function ProcesarImagenNueva(datos) {
 		const canvas = ReducirAnchura(PonerHorizontal(datos.bitmap));
 		const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
 		imagenGris = null;
+		imagenColor = null;
+		let bitmapColor = null;
 		let esquinas = null;
 		let tarjeta = null;
 		try {
 			const imgPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			// guardamos una copia en color antes de convertir a blanco y negro
+			imagenColor = new ImageData(new Uint8ClampedArray(imgPixels.data), imgPixels.width, imgPixels.height);
+			// transferir vacía el canvas, pero mantiene su tamaño y se puede seguir dibujando
+			bitmapColor = canvas.transferToImageBitmap();
+
 			ConvertirBN(imgPixels);
 			imagenGris = imgPixels;
 
@@ -596,7 +607,7 @@ function CodigoWorker() {
 		}
 
 		const bitmap = canvas.transferToImageBitmap();
-		self.postMessage({ id: datos.id, bitmap, esquinas, tarjeta });
+		self.postMessage({ id: datos.id, bitmap, bitmapColor, esquinas, tarjeta });
 	}
 
 	/**
@@ -621,7 +632,39 @@ function CodigoWorker() {
 	}
 
 	/**
-	* Girar 90º la imagen guardada y devolverla, para cuando la foto está en la orientación equivocada
+	* Girar 90º una imagen, en el sentido indicado por el signo
+	*/
+	function GirarImageData(origen, girar) {
+		const w = origen.width;
+		const h = origen.height;
+		const datosOrigen = origen.data;
+		const salida = new ImageData(h, w);
+		const destino = salida.data;
+
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				const xd = girar > 0 ? h - 1 - y : y;
+				const yd = girar > 0 ? x : w - 1 - x;
+				const i = (y * w + x) * 4;
+				const j = (yd * h + xd) * 4;
+				destino[j] = datosOrigen[i];
+				destino[j + 1] = datosOrigen[i + 1];
+				destino[j + 2] = datosOrigen[i + 2];
+				destino[j + 3] = 255;
+			}
+		}
+
+		return salida;
+	}
+
+	function BitmapDeImageData(imgPixels) {
+		const canvas = new OffscreenCanvas(imgPixels.width, imgPixels.height);
+		canvas.getContext('2d').putImageData(imgPixels, 0, 0);
+		return canvas.transferToImageBitmap();
+	}
+
+	/**
+	* Girar 90º las imágenes guardadas y devolverlas, para cuando la foto está en la orientación equivocada
 	*/
 	function ProcesarGiro(datos) {
 		if (!imagenGris) {
@@ -629,28 +672,15 @@ function CodigoWorker() {
 			return;
 		}
 
-		const w = imagenGris.width;
-		const h = imagenGris.height;
-		const origen = imagenGris.data;
-		const salida = new ImageData(h, w);
-		const destino = salida.data;
+		imagenGris = GirarImageData(imagenGris, datos.girar);
 
-		for (let y = 0; y < h; y++) {
-			for (let x = 0; x < w; x++) {
-				const xd = datos.girar > 0 ? h - 1 - y : y;
-				const yd = datos.girar > 0 ? x : w - 1 - x;
-				const i = (y * w + x) * 4;
-				const j = (yd * h + xd) * 4;
-				destino[j] = destino[j + 1] = destino[j + 2] = origen[i];
-				destino[j + 3] = 255;
-			}
+		let bitmapColor = null;
+		if (imagenColor) {
+			imagenColor = GirarImageData(imagenColor, datos.girar);
+			bitmapColor = BitmapDeImageData(imagenColor);
 		}
 
-		imagenGris = salida;
-
-		const canvas = new OffscreenCanvas(salida.width, salida.height);
-		canvas.getContext('2d').putImageData(salida, 0, 0);
-		self.postMessage({ id: datos.id, bitmap: canvas.transferToImageBitmap() });
+		self.postMessage({ id: datos.id, bitmap: BitmapDeImageData(imagenGris), bitmapColor });
 	}
 
 	self.addEventListener('message', e => {

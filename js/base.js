@@ -47,8 +47,11 @@ const botonGrabar = document.getElementById('Guardar');
 // Si se ha aplicado la corrección de perspectiva, contiene ya la imagen enderezada
 let imagenDNI_BN = null;
 
-// Imagen original en blanco y negro sin enderezar, la que se muestra en el editor de esquinas
+// Imagen original en blanco y negro sin enderezar, sobre la que se definen las esquinas
 let imagenOriginalBN = null;
+
+// La misma imagen original pero en color, la que se muestra en el editor de esquinas
+let imagenOriginalColor = null;
 
 // Las 4 esquinas del DNI sobre la imagen original, en orden: sup-izda, sup-dcha, inf-dcha, inf-izda
 let esquinasDNI = null;

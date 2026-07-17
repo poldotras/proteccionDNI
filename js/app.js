@@ -75,6 +75,8 @@ function PrepararDNI(img) {
 		.then(bitmap => EnviarAlWorker({ bitmap }))
 		.then(function (respuesta) {
 			imagenOriginalBN = respuesta.bitmap;
+			// el editor de esquinas muestra la foto en color; si no está disponible, la de blanco y negro
+			imagenOriginalColor = respuesta.bitmapColor || respuesta.bitmap;
 			imagenDNI_BN = respuesta.bitmap;
 
 			if (respuesta.esquinas)

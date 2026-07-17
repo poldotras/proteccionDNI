@@ -7,30 +7,16 @@ Debe cargarse el último, cuando ya están definidos el resto de ficheros de js/
 
 //////////////////////////////////////
 //
-// Modo edición
-//
-//////////////////////////////////////
-
-function ActivarModoEdicion() {
-	document.body.classList.add('Editando');
-	document.getElementById('Edicion').classList.remove('Oculto');
-	// Que no se salga el teclado a elementos no visibles
-	querySelector_Array('.informacion, footer')
-		.forEach(bloque => bloque.inert = true);
-}
-
-function DesactivarModoEdicion() {
-	document.body.classList.remove('Editando');
-	// Restaurar interactividad
-	querySelector_Array('.informacion, footer')
-		.forEach(bloque => bloque.inert = false);
-}
-
-//////////////////////////////////////
-//
 // Carga de la foto
 //
 //////////////////////////////////////
+
+/**
+Mostrar la zona de edición al cargar la primera foto
+*/
+function MostrarEdicion() {
+	document.getElementById('Edicion').classList.remove('Oculto');
+}
 
 /**
 Cargar el fichero elegido como imagen y comenzar el proceso
@@ -40,7 +26,7 @@ function MostrarImagen(file) {
 	img.onload = function () {
 		URL.revokeObjectURL(img.src)
 
-		ActivarModoEdicion();
+		MostrarEdicion();
 		tarjetaResultado = null;
 
 		PrepararDNI(img)
@@ -188,90 +174,40 @@ Watermark.addEventListener('input', () => DibujarMarcaAgua());
 
 botonGrabar.addEventListener('click', GrabarImagen);
 
-activarClickConTeclado(document.getElementById('cerrar'), () => DesactivarModoEdicion());
-
-// desactivar modo edición al pulsar Esc
-document.body.addEventListener('keydown', e => {
-	if (e.key == 'Escape') {
-		// si hay un popover abierto dejamos que lo procese de forma normal
-		if (document.querySelector(':popover-open'))
-			return;
-
-		DesactivarModoEdicion();
-	}
-});
-
 configurarGiro();
 configurarEditorEsquinas();
 configurarCompartir();
 configurarDD(document.body);
 AsignarWatermarkPorDefecto(Watermark);
 
-// detectar si se ha cargado la página con un hash y abrir ese details
-const hash = document.location.hash;
-if (hash) {
-	const info = document.querySelector(hash);
-	if (info && typeof info.open != 'undefined') {
-		info.open = true;
-		info.firstElementChild.focus();
-	}
-}
+// Enlaces de ayuda: si el navegador soporta el Popover API, la respuesta se muestra
+// sin salir de la página; si no, el propio enlace lleva a la pregunta en la portada
+if (HTMLElement.prototype.hasOwnProperty('popover')) {
+	querySelector_Array('.AbrirInfo[data-ayuda]')
+		.forEach(elmto => {
+			const respuesta = document.querySelector('#' + elmto.dataset.ayuda + ' .respuesta');
+			if (!respuesta)
+				return;
 
-// Generar enlaces visibles en los ids
-querySelector_Array('#FAQ details[id]')
-	.forEach(elmto => {
-		elmto.addEventListener('click', () => {
-			if (elmto.open)
-				history.replaceState(null, '', ' ')
-			else
-				history.replaceState(null, '', '#' + elmto.id)
-		});
-	});
-
-// Si el navegador soporta el Popover API, mostraremos la información de ayuda como tooltips sin salir del modo edición
-const soportaPopover = HTMLElement.prototype.hasOwnProperty('popover');
-
-// Abrir información de ayuda al pulsar el enlace
-querySelector_Array('.AbrirInfo')
-	.forEach(elmto => {
-		// popover para los enlaces dentro de la zona de edición
-		if (soportaPopover && elmto.closest('#pasos')) {
-			// clonamos el contenido que queremos mostrar para seguir dentro del modo edición
-			const respuesta = document.querySelector(elmto.getAttribute('href') + ' .respuesta');
+			// clonamos el contenido para mostrarlo como popover bajo el enlace
 			const popover = respuesta.cloneNode(true);
 			popover.classList.remove('respuesta');
 			popover.popover = 'auto';
 			elmto.parentNode.appendChild(popover);
 			elmto.popoverTargetElement = popover;
-		}
 
-		activarClickConTeclado(elmto, (target, ev) => {
-			const popover = elmto.popoverTargetElement;
-			// si hemos preparado el popover lo mostramos en vez de mostrar la respuesta en la parte inferior
-			if (popover) {
+			activarClickConTeclado(elmto, (target, ev) => {
 				// no funciona bien, para cuando llegamos aquí el popover ya se ha cerrado por lo que se vuelve a mostrar
 				if (popover.matches(':popover-open'))
 					popover.hidePopover();
 				else
 					popover.showPopover();
 
-				// lo ponemos por debajo
+				// lo ponemos por debajo del enlace
 				const bb = target.getBoundingClientRect();
 				popover.style.top = (bb.y + bb.height + 10) + 'px';
 
 				ev.preventDefault();
-				return;
-			}
-
-			// navegadores antiguos
-			DesactivarModoEdicion();
-			const info = document.querySelector(target.getAttribute('href'));
-			info.open = true;
-			setTimeout(() => {
-				info.scrollIntoView({ behavior: 'smooth' });
-				info.firstElementChild.focus();
-			}, 500);
-			// que no cambie el hash de la página
-			ev.preventDefault();
+			});
 		});
-	});
+}

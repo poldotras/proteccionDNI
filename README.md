@@ -9,11 +9,13 @@ Si quieres descargarte los ficheros para ejecutarlo desde tu ordenador, pincha e
 
 ## Estructura del código
 
-- `index.html` / `test.html`: la página principal y la página de pruebas con DNIs de ejemplo
+- `index.html`: portada con la explicación, el ejemplo y las preguntas frecuentes
+- `editor.html` / `test.html`: el editor y su página de pruebas con DNIs de ejemplo
 - `estilos.css`: los estilos de ambas páginas
 - `formatos.js`: definición de los formatos de DNI (zonas a ocultar y de marca de agua)
 - `worker.js`: WebWorker que procesa la imagen (blanco y negro, detección de esquinas, enderezado y giros)
-- `js/base.js`: referencias a los elementos de la página, estado compartido y utilidades
+- `js/info.js`: lógica de la portada (abrir preguntas enlazadas)
+- `js/base.js`: referencias a los elementos del editor, estado compartido y utilidades
 - `js/procesador.js`: comunicación con el WebWorker mediante promesas
 - `js/editorEsquinas.js`: editor con los 4 puntos arrastrables, la lupa y los giros
 - `js/resultado.js`: dibujado de la copia protegida, máscaras de censura y marca de agua

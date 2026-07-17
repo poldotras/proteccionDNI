@@ -40,7 +40,6 @@ function GrabarImagen() {
 	} catch (e) {
 		alert('No se ha podido generar la imagen\r\n' + e);
 	}
-	DesactivarModoEdicion();
 }
 
 /**
@@ -90,6 +89,5 @@ function configurarCompartir() {
 		} catch (err) {
 			alert('Error: ' + err);
 		}
-		DesactivarModoEdicion();
 	});
 }

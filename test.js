@@ -19,7 +19,7 @@ function CambiarImagenTest(ev) {
 
 	nombreFichero = img.src;
 
-	ActivarModoEdicion();
+	MostrarEdicion();
 	tarjetaResultado = null;
 
 	// si el nombre coincide con el de un formato, seleccionarlo automáticamente

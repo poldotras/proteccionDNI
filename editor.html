@@ -1,31 +1,26 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
 	<meta charset="UTF-8">
-	<title>Página de pruebas</title>
+	<title>Protege mi DNI</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<link rel="stylesheet" type="text/css" href="estilos.css">
-	<link rel="stylesheet" type="text/css" href="test.css">
 	<link href="favicon.ico" rel="icon">
-	<meta name="robots" content="noindex, nofollow">
+	<meta name="description" content="Crea una copia protegida de tu DNI: en blanco y negro, con los datos privados tapados y una marca de agua con el motivo">
+	<meta name="robots" content="index, follow">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="application-name" content="Protege mi DNI">
+	<link rel="canonical" href="https://protegemidni.es/editor.html" />
 
+	<link rel="manifest" href="manifest.webmanifest">
 	<!-- Si se usa el fichero en local, hay que quitar esta linea, esto debería ser un HTTP Header pero GitHub pages no lo soportan https://github.com/orgs/community/discussions/54257 -->
 	<meta id="MetaCSP" http-equiv="Content-Security-Policy" content="script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' blob: data:; media-src 'none'; font-src 'self'; connect-src data:; frame-src 'none'; object-src 'none'; form-action 'none'; " />
+	<meta http-equiv="X-Content-Type-Options" content="nosniff" />
 </head>
 <body>
 	<main>
-		<h1>Protección del DNI</h1>
-		<section id="introduccion">
-		<p>Pruebas para desarrollo con DNIs ejemplo</p>
-		<div id="Ejemplos">
-			<img src="ejemplos/dni4-frontal.webp" alt="DNI 4 frontal">
-			<img src="ejemplos/dni4-trasera.webp" alt="DNI 4 trasera">
-			<img src="ejemplos/dni3-frontal.webp" alt="DNI 3 frontal">
-			<img src="ejemplos/dni3-trasera.webp" alt="DNI 3 trasera">
-			<img src="ejemplos/dni1-frontal.webp" alt="DNI 1 frontal">
-			<img src="ejemplos/dni1-trasera.webp" alt="DNI 1 trasera">
-		</div>
-		</section>
+		<h1>Protege mi DNI</h1>
 		<noscript>
 			<p>
 				Esta página necesita que actives el Javascript para poder ejecutarla. Todo el proceso se hace en tu navegador y es imprescindible el uso de javascript.
@@ -36,6 +31,7 @@
 					font-weight: bold;
 					text-align: center;
 				}
+
 				#pasos {
 					display: none;
 				}
@@ -43,7 +39,7 @@
 		</noscript>
 		<section id="pasos">
 			<p class="centrado" id="ZonaElegir"><button class="btn BotonPrincipal" type="button" id="ElegirFoto"><span>Elige la foto</span></button></p>
-			<div id="DivFichero"><input type="file" id="SelectorFichero" accept="image/*" title="Selector de foto (no visible)"></div>
+			<div id="DivFichero"><input type="file" id="SelectorFichero" accept="image/*" title="Selector de foto (no visible)" tabindex="-1" aria-hidden="true"></div>
 			<div id="Edicion" class="Oculto">
 				<div id="OpcionesEdicion">
 					<div><label for="Formato">Tipo de foto</label> <select id="Formato"></select></div>
@@ -88,32 +84,29 @@
 				<a id="grabar"></a>
 			</div>
 		</section>
-
-		<aside id="FAQ">
-			<h2>Preguntas y respuestas</h2>
-			<details id="OcultarNumeroSoporte">
-				<summary>¿Debo usar "Ocultar Fecha de Nacimiento, Validez y Nº Soporte"?</summary>
+		<!-- respuestas de la portada que se muestran como popover en los enlaces de ayuda -->
+		<div class="Oculto">
+			<div id="OcultarNumeroSoporte">
 				<div class="respuesta">
 					<p>
 						Estos datos os los pueden solicitar para hacer un "check-in" en alojamientos y verificar que el DNI está en vigor según el Real Decreto 933/2021.
-						En su momento <a href="https://papafrikifeed.duckdns.org/@PapaFriki/episodes/ppf-wwwprotegemidnies-con-alfonso-martinez" target="_blank">Papá Friki</a>
-						me comentó que en ocasiones el dato de Nº Soporte puede ser útil para verificar que no es un DNI falsificado, y por eso también puede ser necesario dejarlo visible.
+						En ocasiones el dato de Nº Soporte puede ser útil para verificar que no es un DNI falsificado, y por eso también puede ser necesario dejarlo visible.
 					</p>
 				</div>
-			</details>
-			<details id="OcultarParcialmente">
-				<summary>¿Para qué sirve "Ocultar parcialmente el DNI"?</summary>
+			</div>
+			<div id="OcultarParcialmente">
 				<div class="respuesta">
 					<p>
-						Seguramente no necesitarás activar esta opción. En el número de DNI se ocultan las 3 primeras y 2 últimas cifras según la <a href="https://www.aepd.es/sites/default/files/2019-09/orientaciones-da7.pdf" target="_blank">orientación para la aplicación provisional de la disposición adicional septima de la LOPDGDD</a><br>
-						Puedes leer la solicitud y caso de uso en <a href="https://github.com/AlfonsoML/proteccionDNI/issues/12" target="_blank">la solicitud</a>.
+						Seguramente no necesitarás activar esta opción. En el número de DNI se ocultan las 3 primeras y 2 últimas cifras según la orientación
+						para la aplicación provisional de la disposición adicional septima de la LOPDGDD.
 					</p>
 				</div>
-			</details>
-		</aside>
+			</div>
+		</div>
+		<p class="centrado"><a href="index.html">Qué hace esta página y preguntas frecuentes</a></p>
 	</main>
 
-	<footer>Página de pruebas. <a href="index.html">Ir a la principal</a></footer>
+	<footer>Esta página no recoge ningún dato. No se envían datos a ninguna parte. No se usan cookies ni servicios de terceros. <a href="https://github.com/AlfonsoML/proteccionDNI/" target="_blank">Código fuente</a></footer>
 	<script type="text/javascript" src="formatos.js"></script>
 	<script type="text/javascript" src="js/base.js"></script>
 	<script type="text/javascript" src="js/procesador.js"></script>
@@ -121,6 +114,5 @@
 	<script type="text/javascript" src="js/resultado.js"></script>
 	<script type="text/javascript" src="js/guardar.js"></script>
 	<script type="text/javascript" src="js/app.js"></script>
-	<script type="text/javascript" src="test.js"></script>
 </body>
 </html>

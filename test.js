@@ -19,7 +19,9 @@ const ScriptsEditor = [
 fetch('editor.html')
 	.then(respuesta => respuesta.text())
 	.then(function (html) {
-		const doc = new DOMParser().parseFromString(html, 'text/html');
+		// quitar el noscript antes de parsear: DOMParser trabaja sin javascript, por lo que
+		// interpretaría su <style> interno y el CSP de la página rechaza los estilos inline
+		const doc = new DOMParser().parseFromString(html.replace(/<noscript>[\s\S]*?<\/noscript>/g, ''), 'text/html');
 
 		// inyectar la sección del editor y el bloque oculto con las respuestas de ayuda
 		const contenedor = document.getElementById('ContenedorEditor');

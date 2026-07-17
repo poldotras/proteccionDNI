@@ -2,7 +2,7 @@
 // .Mascaras: los rectángulos a ocultar con negro
 // .Watermarks: array de objetos que definen fuente, estilo y rectángulo a rellenar con el watermark elegido
 //   (con mayusculas: true el texto se escribe en mayúsculas, como la zona de lectura mecánica del DNI;
-//   angulo rota todo el texto los grados indicados)
+//   angulo rota todo el texto los grados indicados, o al azar entre -90 y 90 con 'aleatorio')
 const FormatosDnis = {
 	'-': {
 		Nombre: ' ', // Sin máscara
@@ -12,7 +12,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
@@ -42,7 +42,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
@@ -59,7 +59,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
@@ -88,7 +88,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
@@ -105,7 +105,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
@@ -128,7 +128,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
@@ -144,7 +144,7 @@ const FormatosDnis = {
 			fuente: "600 16px 'Courier New', monospace",
 			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
-			angulo: -45,
+			angulo: 'aleatorio',
 			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},

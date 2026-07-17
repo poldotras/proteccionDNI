@@ -122,6 +122,10 @@ function DibujarMascara() {
 	}
 }
 
+// Rotación de las marcas con angulo 'aleatorio': al azar entre -90º y 90º,
+// distinta en cada carga de la página para que las copias no sean predecibles
+const AnguloAleatorio = Math.round(Math.random() * 180) - 90;
+
 /**
 Sobre escribir texto en las zonas que se definan para el formato elegido
 */
@@ -135,7 +139,8 @@ function DibujarMarcaAgua() {
 
 	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
 		const textoMarca = marca.mayusculas ? texto.toUpperCase() : texto;
-		RellenarTexto(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h, marca.angulo);
+		const angulo = marca.angulo == 'aleatorio' ? AnguloAleatorio : marca.angulo;
+		RellenarTexto(textoMarca, ctx, marca.fuente, marca.estilo, marca.bb.x, marca.bb.y, marca.bb.w, marca.bb.h, angulo);
 	});
 }
 

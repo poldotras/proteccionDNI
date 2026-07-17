@@ -47,13 +47,31 @@ function MostrarImagen(file) {
 }
 
 /**
+Crear el ImageBitmap que se envía al WebWorker.
+Con algunas fotos (los móviles actuales generan imágenes enormes) createImageBitmap
+falla con "The ImageBitmap could not be allocated"; en ese caso reducimos la foto
+pasándola por un canvas. No se pierde calidad: el worker trabaja a 2000px como máximo.
+*/
+function CrearBitmap(img) {
+	return createImageBitmap(img)
+		.catch(function () {
+			const escala = Math.min(1, 2000 / img.naturalWidth, 2000 / img.naturalHeight);
+			const canvas = document.createElement('canvas');
+			canvas.width = Math.max(1, Math.round(img.naturalWidth * escala));
+			canvas.height = Math.max(1, Math.round(img.naturalHeight * escala));
+			canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+			return createImageBitmap(canvas);
+		});
+}
+
+/**
 Tomamos la imagen original del DNI y la preparamos a blanco y negro,
 detectando las esquinas de la tarjeta y enderezándola si es posible.
 Devuelve una promesa
 */
 function PrepararDNI(img) {
 	// creamos un objeto transferable que podamos enviar al WebWorker
-	return createImageBitmap(img)
+	return CrearBitmap(img)
 		.then(bitmap => EnviarAlWorker({ bitmap }))
 		.then(function (respuesta) {
 			imagenOriginalBN = respuesta.bitmap;

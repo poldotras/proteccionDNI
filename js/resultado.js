@@ -172,67 +172,25 @@ function MetricasLetras(ctx, fuente, letras) {
 }
 
 /**
-Estampado de seguridad que cubre la zona con líneas de texto onduladas y rotadas:
-empiezan a 45º arriba a la izquierda y la inclinación va aumentando hasta 70º abajo,
-manteniendo la separación con la línea anterior para que nunca se toquen
+Estampado de seguridad: el relleno ondulado de siempre pero con todo el texto rotado -45º.
+Se rellena una zona ampliada que, una vez girada, cubre toda la zona pedida,
+y un clip evita dibujar nada fuera de ella
 */
 function RellenarEstampado(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight) {
-	ctx.font = fuente;
-	ctx.fillStyle = estilo;
+	const angulo = -45 * Math.PI / 180;
 
-	const metrics = ctx.measureText('A');
-	const lineHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
-	const amplitud = lineHeight * 0.22;
-	const longitudOnda = 250;
-
-	const anguloInicial = 45 * Math.PI / 180;
-	const anguloFinal = 70 * Math.PI / 180;
-	// separación perpendicular entre líneas, con hueco para la onda
-	const separacion = lineHeight + amplitud;
-
-	const letras = (texto + ' - ').split('');
-	const Metricas = MetricasLetras(ctx, fuente, letras);
-
-	// no dibujar nada fuera de la zona indicada
 	ctx.save();
 	ctx.beginPath();
 	ctx.rect(x, y, maxWidth, maxHeight);
 	ctx.clip();
 
-	// las líneas se anclan en el borde izquierdo, empezando por encima de la zona
-	// para que las primeras crucen la esquina superior derecha
-	const inicioY = y - maxWidth * Math.tan(anguloInicial);
-	const finY = y + maxHeight;
-	for (let ancla = inicioY; ancla < finY;) {
-		// la inclinación crece linealmente con la posición de la línea
-		const fraccion = (ancla - inicioY) / (finY - inicioY);
-		const angulo = anguloInicial + (anguloFinal - anguloInicial) * fraccion;
-		const coseno = Math.cos(angulo);
-		const seno = Math.sin(angulo);
+	// rotar alrededor del centro de la zona
+	ctx.translate(x + maxWidth / 2, y + maxHeight / 2);
+	ctx.rotate(angulo);
 
-		ctx.save();
-		ctx.translate(x, ancla);
-		ctx.rotate(angulo);
-
-		let n = 0;
-		for (let posicion = 0; ; posicion += Metricas[letras[n]], n = (n + 1) % letras.length) {
-			// posición de la letra en coordenadas de la zona, para saber cuándo entra y sale
-			const px = posicion * coseno;
-			const py = ancla + posicion * seno;
-			if (px > maxWidth || py > finY + lineHeight)
-				break;
-			// las letras de la parte que queda por encima de la zona no hace falta dibujarlas
-			if (py < y - lineHeight)
-				continue;
-
-			const yOnda = amplitud * Math.sin(posicion * 2 * Math.PI / longitudOnda + ancla);
-			ctx.fillText(letras[n], posicion, yOnda);
-		}
-		ctx.restore();
-
-		// avance vertical que mantiene la separación perpendicular con la línea anterior
-		ancla += separacion / coseno;
-	}
+	// cuadrado del tamaño de la diagonal, que rotado sigue tapando la zona entera
+	const lado = Math.hypot(maxWidth, maxHeight);
+	RellenarTexto(texto, ctx, fuente, estilo, -lado / 2, -lado / 2, lado, lado);
 
 	ctx.restore();
 }

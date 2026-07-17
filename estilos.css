@@ -58,7 +58,6 @@ select {
 	background: transparent;
 }
 
-
 #ControlesDesplazamiento > .ContenedorControl {
 	margin: 10px 0;
 }
@@ -382,71 +381,6 @@ footer {
 	gap: 3px;
 }
 
-#ControlesPantalla {
-	right: 0;
-}
-
-#Colapsar {
-	display: none;
-}
-
-.EnZoom #Colapsar {
-	display: block;
-}
-
-.EnZoom #Expandir {
-	display: none;
-}
-
-.EnZoom #Previsualizacion {
-	z-index: 1;
-	max-height: 100vh;
-	margin: 0 auto;
-}
-
-.EnZoom h1 {
-	display: none;
-}
-
-.EnZoom canvas {
-	width: 100%;
-}
-
-.EnZoom footer {
-	display: none;
-}
-
-.EnZoom main {
-	max-width: none;
-	padding: 0;
-	width: 100vw;
-}
-
-.EnZoom #OpcionesEdicion,
-.EnZoom #PanelOriginal,
-.EnZoom #ZonaElegir,
-.EnZoom #ZonaGuardar,
-.EnZoom .TituloVista {
-	display: none;
-}
-
-.EnZoom #Vistas {
-	display: block;
-}
-
-.EnZoom #pasos {
-	padding: 0;
-}
-
-.EnZoom #cerrar {
-	display: none;
-}
-
-body.EnZoom {
-	display: grid;
-	justify-content: center;
-}
-
 /* mostrar un indicador en los enlaces que abrir�n nueva ventana */
 a[target='_blank'] {
 	position: relative;
@@ -561,8 +495,6 @@ a[href^='#'] {
 	stroke: #FFF;
 	stroke-width: 3;
 }
-
-
 
 /* zona ampliada alrededor de cada esquina para poder arrastrarla bien con el dedo */
 .ZonaToque {

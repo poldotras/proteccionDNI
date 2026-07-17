@@ -157,8 +157,6 @@ activarClickConTeclado(document.getElementById('cerrar'), () => DesactivarModoEd
 
 initGestures();
 
-configurarPantallaCompleta();
-
 // detectar si se ha cargado la página con un hash y abrir ese details
 const hash = document.location.hash;
 if (hash) {
@@ -268,26 +266,6 @@ function DesactivarModoEdicion() {
 		.forEach(bloque => bloque.inert = false);
 }
 
-/**
-Permitir ver el DNI a pantalla completa para facilitar ajustes de zoom y posición
-*/
-function configurarPantallaCompleta() {
-	activarClickConTeclado(document.getElementById('Expandir'), () => {
-		// añadimos una clase para ocultar el resto de elementos de la página en cualquier caso
-		document.body.classList.add('EnZoom');
-
-		// y le pedimos al usuario a ver si nos permite usar la pantalla completa real
-		if (document.body.requestFullscreen)
-			document.body.requestFullscreen();
-	});
-
-	activarClickConTeclado(document.getElementById('Colapsar'), () => {
-		document.body.classList.remove('EnZoom');
-
-		if (document.fullscreenElement)
-			document.exitFullscreen();
-	});
-}
 /**
  * Detecta click o que activamos un elemento mediante el teclado con espacio o la tecla de enteer 
  * @param {any} elmto

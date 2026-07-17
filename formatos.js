@@ -9,7 +9,7 @@ const FormatosDnis = {
 		],
 		Watermarks: [{
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -38,7 +38,7 @@ const FormatosDnis = {
 			bb: { x: 10, y: 190, w: 360, h: 490 }
 		}, {
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -54,7 +54,7 @@ const FormatosDnis = {
 		],
 		Watermarks: [{
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -82,7 +82,7 @@ const FormatosDnis = {
 			bb: { x: 10, y: 140, w: 350, h: 460 }
 		}, {
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -98,7 +98,7 @@ const FormatosDnis = {
 		],
 		Watermarks: [{
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -120,7 +120,7 @@ const FormatosDnis = {
 			bb: { x: 700, y: 340, w: 290, h: 310 }
 		}, {
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]
@@ -135,7 +135,7 @@ const FormatosDnis = {
 		],
 		Watermarks: [{
 			fuente: "600 16px 'Courier New', monospace",
-			estilo: 'rgb(0 0 0 / 50%)',
+			estilo: 'rgb(0 0 0 / 40%)',
 			mayusculas: true,
 			bb: { x: 10, y: 30, w: 980, h: 605 }
 		}]

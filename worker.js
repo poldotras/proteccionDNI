@@ -564,6 +564,23 @@ function CodigoWorker() {
 		return canvasEscalado;
 	}
 
+	// Tono mínimo de la copia protegida: los negros puros quedan como un gris oscuro
+	const NegroMinimo = 45;
+
+	/**
+	* Reescalar los tonos al rango [NegroMinimo, 255] para que la copia
+	* no tenga negros totalmente puros. Modifica la imagen y la devuelve.
+	*/
+	function AclararNegros(imgPixels) {
+		const datos = imgPixels.data;
+		const factor = (255 - NegroMinimo) / 255;
+		for (let i = 0; i < datos.length; i += 4) {
+			const tono = NegroMinimo + datos[i] * factor;
+			datos[i] = datos[i + 1] = datos[i + 2] = tono;
+		}
+		return imgPixels;
+	}
+
 	// Imagen en escala de grises de la última foto procesada, para poder enderezarla
 	// de nuevo cada vez que se ajusten las esquinas sin reprocesarlo todo
 	let imagenGris = null;
@@ -601,7 +618,10 @@ function CodigoWorker() {
 				esquinas = deteccion.esquinas || null;
 			}
 
-			ctx.putImageData(imgPixels, 0, 0);
+			// para la salida se aclaran los negros sobre una copia; imagenGris mantiene
+			// el rango completo, que es el que usan la detección y el enderezado
+			const salida = new ImageData(new Uint8ClampedArray(imgPixels.data), imgPixels.width, imgPixels.height);
+			ctx.putImageData(AclararNegros(salida), 0, 0);
 		} catch (e) {
 			// getImageData da error al usar imagen de prueba con file://
 		}
@@ -626,7 +646,7 @@ function CodigoWorker() {
 		}
 
 		const canvas = new OffscreenCanvas(imagenGris.width, imagenGris.height);
-		canvas.getContext('2d').putImageData(enderezado.imgPixels, 0, 0);
+		canvas.getContext('2d').putImageData(AclararNegros(enderezado.imgPixels), 0, 0);
 		const bitmap = canvas.transferToImageBitmap();
 		self.postMessage({ id: datos.id, bitmap, tarjeta: enderezado.tarjeta });
 	}

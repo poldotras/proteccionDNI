@@ -93,6 +93,30 @@ function CodigoWorker() {
 	}
 
 	/**
+	* Encoger la máscara: borra los trazos finos (letras o líneas del fondo)
+	* conservando los bloques sólidos como la tarjeta
+	*/
+	function Erosionar(m, veces) {
+		const { mw, mh } = m;
+		let mascara = m.mascara;
+		for (let v = 0; v < veces; v++) {
+			const salida = new Uint8Array(mascara);
+			for (let y = 0; y < mh; y++) {
+				for (let x = 0; x < mw; x++) {
+					const p = y * mw + x;
+					if (!mascara[p])
+						continue;
+					if (x == 0 || !mascara[p - 1] || x == mw - 1 || !mascara[p + 1] ||
+						y == 0 || !mascara[p - mw] || y == mh - 1 || !mascara[p + mw])
+						salida[p] = 0;
+				}
+			}
+			mascara = salida;
+		}
+		m.mascara = mascara;
+	}
+
+	/**
 	* Encontrar el mayor bloque de celdas conectadas de la máscara, que debería ser el DNI
 	*/
 	function MayorComponente(m) {
@@ -430,20 +454,25 @@ function CodigoWorker() {
 
 		// el contraste tarjeta-fondo varía mucho entre fotos (una tarjeta clara sobre una
 		// mesa blanca apenas contrasta): se prueba de mayor a menor exigencia y nos
-		// quedamos con el primer umbral que encuentra las 4 esquinas
+		// quedamos con el primer umbral que encuentra las 4 esquinas.
+		// primero con apertura (que despega del DNI las letras o dibujos del fondo);
+		// sin ella de reserva, porque una tarjeta que apenas contrasta da una máscara
+		// con claros que la erosión podría romper
 		let recuadro = null;
-		for (const umbral of [40, 20, 10]) {
-			const deteccion = DetectarConUmbral(imgPixels, fondo, umbral);
-			if (!deteccion)
-				continue;
-			if (deteccion.esquinas)
-				return deteccion;
+		for (const conApertura of [true, false]) {
+			for (const umbral of [40, 20, 10]) {
+				const deteccion = DetectarConUmbral(imgPixels, fondo, umbral, conApertura);
+				if (!deteccion)
+					continue;
+				if (deteccion.esquinas)
+					return deteccion;
 
-			// si ningún umbral da esquinas, recordamos el mejor recuadro:
-			// el primero con la proporción de una tarjeta, o el primero que haya
-			const proporcion = deteccion.tarjeta.w / deteccion.tarjeta.h;
-			if (!recuadro || (proporcion > 1.1 && proporcion < 2.4 && !recuadro.plausible))
-				recuadro = { tarjeta: deteccion.tarjeta, plausible: proporcion > 1.1 && proporcion < 2.4 };
+				// si nada da esquinas, recordamos el mejor recuadro:
+				// el primero con la proporción de una tarjeta, o el primero que haya
+				const proporcion = deteccion.tarjeta.w / deteccion.tarjeta.h;
+				if (!recuadro || (proporcion > 1.1 && proporcion < 2.4 && !recuadro.plausible))
+					recuadro = { tarjeta: deteccion.tarjeta, plausible: proporcion > 1.1 && proporcion < 2.4 };
+			}
 		}
 		return recuadro && { tarjeta: recuadro.tarjeta };
 	}
@@ -451,8 +480,16 @@ function CodigoWorker() {
 	/**
 	* Una pasada de detección con un umbral de contraste concreto
 	*/
-	function DetectarConUmbral(imgPixels, fondo, umbral) {
+	function DetectarConUmbral(imgPixels, fondo, umbral, conApertura) {
 		const m = CrearMascara(imgPixels, fondo, umbral);
+
+		if (conApertura) {
+			// apertura morfológica: borra letras y trazos finos del fondo, para que la
+			// dilatación posterior no los pegue a la tarjeta
+			const erosiones = 3;
+			Erosionar(m, erosiones);
+			Dilatar(m, erosiones);
+		}
 
 		const dilataciones = 4;
 		Dilatar(m, dilataciones);

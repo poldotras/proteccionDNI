@@ -19,55 +19,31 @@ function MostrarEdicion() {
 }
 
 /**
-Comenzar la edición con la imagen indicada (un <img> o un canvas)
-*/
-function EditarImagen(imagen) {
-	MostrarEdicion();
-	tarjetaResultado = null;
-
-	PrepararDNI(imagen)
-		.then(() => RedibujarDNI())
-		.catch(error => {
-			alert('Error preparando DNI \r\n' + error);
-			console.error(error)
-		});
-
-	DibujarMascara();
-	DibujarMarcaAgua();
-}
-
-/**
-Cargar el fichero elegido (imagen o pdf) y comenzar el proceso
+Cargar el fichero elegido como imagen y comenzar el proceso
 */
 function MostrarImagen(file) {
-	if (EsPdf(file)) {
-		MostrarPdf(file);
-		return;
-	}
-
 	const img = new Image;
 	img.onload = function () {
 		URL.revokeObjectURL(img.src)
-		EditarImagen(img);
+
+		MostrarEdicion();
+		tarjetaResultado = null;
+
+		PrepararDNI(img)
+			.then(() => RedibujarDNI())
+			.catch(error => {
+				alert('Error preparando DNI \r\n' + error);
+				console.error(error)
+			});
+
+		DibujarMascara();
+		DibujarMarcaAgua();
 	}
 	img.onerror = function (e) {
 		console.log(e);
 		alert('Por favor, escoge una imagen válida');
 	}
 	img.src = URL.createObjectURL(file);
-}
-
-/**
-Extraer la imagen del DNI incrustada en el pdf y editarla como una imagen normal
-*/
-function MostrarPdf(file) {
-	file.arrayBuffer()
-		.then(ExtraerImagenPdf)
-		.then(EditarImagen)
-		.catch(function (error) {
-			console.error(error);
-			alert('No se ha podido leer el DNI del pdf.\r\n' + (error.message || error) + '\r\nPrueba con una foto o una captura de pantalla del documento.');
-		});
 }
 
 /**
@@ -79,13 +55,10 @@ pasándola por un canvas. No se pierde calidad: el worker trabaja a 2000px como 
 function CrearBitmap(img) {
 	return createImageBitmap(img)
 		.catch(function () {
-			// la fuente puede ser un <img> (naturalWidth) o un canvas (width)
-			const ancho = img.naturalWidth || img.width;
-			const alto = img.naturalHeight || img.height;
-			const escala = Math.min(1, 2000 / ancho, 2000 / alto);
+			const escala = Math.min(1, 2000 / img.naturalWidth, 2000 / img.naturalHeight);
 			const canvas = document.createElement('canvas');
-			canvas.width = Math.max(1, Math.round(ancho * escala));
-			canvas.height = Math.max(1, Math.round(alto * escala));
+			canvas.width = Math.max(1, Math.round(img.naturalWidth * escala));
+			canvas.height = Math.max(1, Math.round(img.naturalHeight * escala));
 			canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
 			return createImageBitmap(canvas);
 		});

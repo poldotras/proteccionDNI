@@ -41,7 +41,7 @@ function CodigoWorker() {
 	* Crear una máscara binaria a tamaño reducido marcando las zonas que contrastan con el fondo.
 	* Al agrupar los píxeles en celdas se elimina de paso el ruido de píxeles sueltos.
 	*/
-	function CrearMascara(imgPixels, fondo) {
+	function CrearMascara(imgPixels, fondo, umbral) {
 		const w = imgPixels.width;
 		const h = imgPixels.height;
 		const data = imgPixels.data;
@@ -50,8 +50,6 @@ function CodigoWorker() {
 		const mw = Math.floor(w / factor);
 		const mh = Math.floor(h / factor);
 		const mascara = new Uint8Array(mw * mh);
-
-		const umbral = 40;
 		// una celda se activa si al menos el 10% de sus píxeles contrastan con el fondo
 		const minCuenta = Math.max(1, factor * factor * 0.1);
 		for (let my = 0; my < mh; my++) {
@@ -179,15 +177,43 @@ function CodigoWorker() {
 	* segmento entre esquinas y se ajusta una recta; como el DNI tiene las esquinas redondeadas,
 	* la esquina buscada es la intersección de las rectas de los dos lados, no el borde en sí.
 	*/
-	function RefinarEsquinas(imgPixels, esquinas, fondo) {
+	/**
+	* Tono típico del interior de la tarjeta: la mediana de una rejilla de muestras
+	* alrededor del centro del cuadrilátero detectado
+	*/
+	function TonoInterior(imgPixels, esquinas) {
+		const data = imgPixels.data;
+		const cx = (esquinas[0].x + esquinas[1].x + esquinas[2].x + esquinas[3].x) / 4;
+		const cy = (esquinas[0].y + esquinas[1].y + esquinas[2].y + esquinas[3].y) / 4;
+		const xs = esquinas.map(p => p.x);
+		const ys = esquinas.map(p => p.y);
+		const dx = (Math.max(...xs) - Math.min(...xs)) * 0.2;
+		const dy = (Math.max(...ys) - Math.min(...ys)) * 0.2;
+
+		const muestras = [];
+		for (let j = -5; j <= 5; j++) {
+			for (let i = -5; i <= 5; i++) {
+				const x = Math.round(cx + i * dx / 5);
+				const y = Math.round(cy + j * dy / 5);
+				if (x >= 0 && y >= 0 && x < imgPixels.width && y < imgPixels.height)
+					muestras.push(data[(y * imgPixels.width + x) * 4]);
+			}
+		}
+		muestras.sort((a, b) => a - b);
+		return muestras[muestras.length >> 1];
+	}
+
+	function RefinarEsquinas(imgPixels, esquinas, fondo, umbralMascara) {
 		const w = imgPixels.width;
 		const h = imgPixels.height;
 		const data = imgPixels.data;
 
 		// umbral más sensible que el de la máscara para pillar también bordes débiles,
 		// que no da problemas porque solo se busca en la franja alrededor del segmento
-		const umbral = 25;
+		const umbral = Math.min(25, umbralMascara);
 		const franja = 25;
+		const tonoTarjeta = TonoInterior(imgPixels, esquinas);
+		const margenTono = 35;
 
 		function contrasta(x, y) {
 			if (x < 0 || y < 0 || x >= w || y >= h)
@@ -195,16 +221,38 @@ function CodigoWorker() {
 			return Math.abs(data[(y * w + x) * 4] - fondo) > umbral;
 		}
 
+		function pareceTarjeta(x, y) {
+			if (x < 0 || y < 0 || x >= w || y >= h)
+				return false;
+			return Math.abs(data[(y * w + x) * 4] - tonoTarjeta) <= margenTono;
+		}
+
 		/**
-		* Puntos del borde de un lado: para cada posición entre las dos esquinas (descartando un
-		* 15% en cada extremo por el redondeo) se busca desde fuera el primer píxel con contraste
-		* dentro de la franja. porColumnas recorre x buscando en y (lados horizontales) o al revés.
+		* Puntos del borde de un lado. Primero se exige que tras el borde venga el tono
+		* de la tarjeta (lo que descarta sombras pegadas y vetas del fondo); si así no
+		* se cubre suficiente lado (por ejemplo con una banda oscura impresa hasta el
+		* borde), se reintenta pidiendo solo contraste sostenido con el fondo.
 		*/
 		function puntosLado(pa, pb, porColumnas, desdeElPrincipio) {
+			const conTono = EscanearLado(pa, pb, porColumnas, desdeElPrincipio, true);
+			if (conTono.cobertura >= 0.35)
+				return conTono;
+			return EscanearLado(pa, pb, porColumnas, desdeElPrincipio, false);
+		}
+
+		/**
+		* Para cada posición entre las dos esquinas (descartando un 15% en cada extremo
+		* por el redondeo) se busca desde fuera el primer píxel con contraste dentro de
+		* la franja que dé paso, de forma sostenida, al interior de la tarjeta.
+		* porColumnas recorre x buscando en y (lados horizontales) o al revés.
+		*/
+		function EscanearLado(pa, pb, porColumnas, desdeElPrincipio, usarTono) {
 			const ua = porColumnas ? pa.x : pa.y;
 			const ub = porColumnas ? pb.x : pb.y;
 			const va = porColumnas ? pa.y : pa.x;
 			const vb = porColumnas ? pb.y : pb.x;
+
+			const esInterior = usarTono ? pareceTarjeta : contrasta;
 
 			const puntos = [];
 			const margen = Math.abs(ub - ua) * 0.15;
@@ -219,9 +267,21 @@ function CodigoWorker() {
 					if (porColumnas ? contrasta(u, v) : contrasta(v, u)) {
 						// si ya hay contraste en el primer píxel es que la franja está dentro
 						// de la tarjeta y no estamos viendo el borde: no vale como punto
-						if (i > 0)
+						if (i == 0)
+							break;
+
+						// tras el borde debe venir el interior de forma sostenida:
+						// un par de píxeles sueltos (una veta del fondo) no valen
+						let dentro = 0;
+						for (let k = 1; k <= 8; k++) {
+							const vk = v + paso * k;
+							if (porColumnas ? esInterior(u, vk) : esInterior(vk, u))
+								dentro++;
+						}
+						if (dentro >= 7) {
 							puntos.push({ u, v });
-						break;
+							break;
+						}
 					}
 				}
 			}
@@ -341,8 +401,8 @@ function CodigoWorker() {
 		// los lados opuestos deben ser parecidos y la proporción similar a la de un DNI apaisado;
 		// si no, aplicamos solo el encuadre sin corregir la perspectiva
 		const proporcion = (arriba + abajo) / (izquierda + derecha);
-		if (Math.min(arriba, abajo) / Math.max(arriba, abajo) < 0.6 ||
-			Math.min(izquierda, derecha) / Math.max(izquierda, derecha) < 0.6 ||
+		if (Math.min(arriba, abajo) / Math.max(arriba, abajo) < 0.7 ||
+			Math.min(izquierda, derecha) / Math.max(izquierda, derecha) < 0.7 ||
 			proporcion < 1.1 || proporcion > 2.4)
 			return { tarjeta };
 
@@ -367,7 +427,32 @@ function CodigoWorker() {
 	*/
 	function DetectarTarjeta(imgPixels) {
 		const fondo = EstimarFondo(imgPixels);
-		const m = CrearMascara(imgPixels, fondo);
+
+		// el contraste tarjeta-fondo varía mucho entre fotos (una tarjeta clara sobre una
+		// mesa blanca apenas contrasta): se prueba de mayor a menor exigencia y nos
+		// quedamos con el primer umbral que encuentra las 4 esquinas
+		let recuadro = null;
+		for (const umbral of [40, 20, 10]) {
+			const deteccion = DetectarConUmbral(imgPixels, fondo, umbral);
+			if (!deteccion)
+				continue;
+			if (deteccion.esquinas)
+				return deteccion;
+
+			// si ningún umbral da esquinas, recordamos el mejor recuadro:
+			// el primero con la proporción de una tarjeta, o el primero que haya
+			const proporcion = deteccion.tarjeta.w / deteccion.tarjeta.h;
+			if (!recuadro || (proporcion > 1.1 && proporcion < 2.4 && !recuadro.plausible))
+				recuadro = { tarjeta: deteccion.tarjeta, plausible: proporcion > 1.1 && proporcion < 2.4 };
+		}
+		return recuadro && { tarjeta: recuadro.tarjeta };
+	}
+
+	/**
+	* Una pasada de detección con un umbral de contraste concreto
+	*/
+	function DetectarConUmbral(imgPixels, fondo, umbral) {
+		const m = CrearMascara(imgPixels, fondo, umbral);
 
 		const dilataciones = 4;
 		Dilatar(m, dilataciones);
@@ -380,8 +465,8 @@ function CodigoWorker() {
 		// dos pasadas de refinado: la primera acerca las esquinas al borde real y la segunda,
 		// con la franja de búsqueda ya bien centrada, las deja clavadas
 		let esquinas = EsquinasComponente(m, etiquetas, mejor, dilataciones);
-		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo);
-		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo);
+		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo, umbral);
+		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo, umbral);
 
 		// las intersecciones de las rectas pueden quedar algo fuera de la imagen, las limitamos
 		esquinas = esquinas.map(p => ({

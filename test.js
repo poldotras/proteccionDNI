@@ -31,11 +31,43 @@ fetch('editor.html')
 		// cargar los scripts del editor en orden, ahora que ya existen sus elementos
 		return ScriptsEditor.reduce((previo, src) => previo.then(() => CargarScript(src)), Promise.resolve());
 	})
-	.then(ActivarGaleria)
+	.then(function () {
+		ActivarGaleria();
+		ActivarPanelEsquinas();
+	})
 	.catch(function (error) {
 		console.error(error);
 		alert('No se ha podido cargar el editor.\r\nLa página de pruebas necesita un servidor web, no funciona abriendo el fichero directamente.');
 	});
+
+/**
+Panel de depuración con las coordenadas de los 4 puntos, para poder comparar
+dónde ha colocado las esquinas la detección y dónde deberían estar.
+Se actualiza con cada redibujado del marco (detección, arrastre o giro).
+*/
+function ActivarPanelEsquinas() {
+	const panel = document.createElement('div');
+	panel.id = 'CoordenadasEsquinas';
+	document.getElementById('ZonaGuardar').before(panel);
+
+	const nombres = ['arriba-izquierda', 'arriba-derecha', 'abajo-derecha', 'abajo-izquierda'];
+	function MostrarCoordenadas() {
+		if (!esquinasDNI)
+			return;
+
+		const tamano = imagenOriginalBN ? ` (imagen de ${imagenOriginalBN.width}×${imagenOriginalBN.height})` : '';
+		panel.textContent = 'Esquinas' + tamano + ': ' + esquinasDNI
+			.map((p, i) => nombres[i] + ' ' + Math.round(p.x) + ',' + Math.round(p.y))
+			.join(' | ');
+	}
+
+	// envolver la función global que se llama en cada actualización del marco
+	const original = ActualizarMarcoEsquinas;
+	ActualizarMarcoEsquinas = function () {
+		original();
+		MostrarCoordenadas();
+	};
+}
 
 function CargarScript(src) {
 	return new Promise(function (resolve, reject) {

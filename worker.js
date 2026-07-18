@@ -17,24 +17,52 @@ function CodigoWorker() {
 		}
 	}
 
+	function Mediana(muestras) {
+		muestras.sort((a, b) => a - b);
+		return muestras[muestras.length >> 1];
+	}
+
 	/**
-	* Estimar la luminosidad del fondo con la mediana de los píxeles de los bordes de la foto
+	* Posibles luminosidades del fondo: la mediana de las 4 esquinas de la foto
+	* (robusta con encuadres ajustados, donde los bordes los ocupa la tarjeta) y la
+	* mediana de los bordes (mejor cuando las esquinas caen en otra superficie).
+	* Se devuelven sin repetir para que la detección pruebe con cada una.
 	*/
-	function EstimarFondo(imgPixels) {
+	function FondosCandidatos(imgPixels) {
 		const w = imgPixels.width;
 		const h = imgPixels.height;
 		const data = imgPixels.data;
 
-		const muestras = [];
+		const lado = Math.round(Math.min(w, h) * 0.08);
+		const esquinas = [];
+		[[0, 0], [w - lado, 0], [0, h - lado], [w - lado, h - lado]].forEach(function ([x0, y0]) {
+			for (let y = y0; y < y0 + lado; y += 2) {
+				for (let x = x0; x < x0 + lado; x += 2)
+					esquinas.push(data[(y * w + x) * 4]);
+			}
+		});
+
+		const bordes = [];
 		const salto = 10;
 		for (let x = 0; x < w; x += salto) {
-			muestras.push(data[x * 4], data[((h - 1) * w + x) * 4]);
+			bordes.push(data[x * 4], data[((h - 1) * w + x) * 4]);
 		}
 		for (let y = 0; y < h; y += salto) {
-			muestras.push(data[y * w * 4], data[(y * w + w - 1) * 4]);
+			bordes.push(data[y * w * 4], data[(y * w + w - 1) * 4]);
 		}
-		muestras.sort((a, b) => a - b);
-		return muestras[muestras.length >> 1];
+
+		const fondos = [Mediana(esquinas)];
+		const porBordes = Mediana(bordes);
+		if (Math.abs(porBordes - fondos[0]) > 12)
+			fondos.push(porBordes);
+
+		// percentil alto de todas las muestras: rescata fondos claros cuyo tono baja
+		// en las esquinas por el viñeteado de la cámara
+		const todas = esquinas.concat(bordes).sort((a, b) => a - b);
+		const claro = todas[Math.floor(todas.length * 0.85)];
+		if (fondos.every(fondo => Math.abs(claro - fondo) > 12))
+			fondos.push(claro);
+		return fondos;
 	}
 
 	/**
@@ -163,36 +191,88 @@ function CodigoWorker() {
 	}
 
 	/**
-	* Buscar las 4 esquinas aproximadas del bloque detectado: los puntos extremos en las 4 diagonales.
-	* Funciona bien mientras la tarjeta no esté girada más de ~40º, que es lo esperable en una foto.
+	* Buscar las 4 esquinas aproximadas del bloque detectado: se estima su orientación
+	* con los ejes principales de las celdas y se toma el rectángulo entre los cuantiles
+	* del 2% en cada eje. Los cuantiles hacen que un apéndice pegado (un cordón, una
+	* letra del fondo) apenas desplace el rectángulo, al contrario que los extremos.
 	*/
 	function EsquinasComponente(m, etiquetas, mejor, dilataciones) {
 		const { mw, mh, factor } = m;
-		let tl, tr, br, bl;
-		let minSuma = Infinity, maxSuma = -Infinity, minResta = Infinity, maxResta = -Infinity;
 
+		// centro de masas del bloque
+		let n = 0, sumaX = 0, sumaY = 0;
 		for (let y = 0; y < mh; y++) {
 			for (let x = 0; x < mw; x++) {
 				if (etiquetas[y * mw + x] != mejor)
 					continue;
-				const suma = x + y;
-				const resta = x - y;
-				if (suma < minSuma) { minSuma = suma; tl = { x, y }; }
-				if (suma > maxSuma) { maxSuma = suma; br = { x, y }; }
-				if (resta > maxResta) { maxResta = resta; tr = { x, y }; }
-				if (resta < minResta) { minResta = resta; bl = { x, y }; }
+				n++;
+				sumaX += x;
+				sumaY += y;
 			}
 		}
+		const cx = sumaX / n;
+		const cy = sumaY / n;
 
-		// compensar la expansión de Dilatar, que desplaza las esquinas hacia fuera en diagonal
-		const ajuste = dilataciones / 2;
-		tl = { x: tl.x + ajuste, y: tl.y + ajuste };
-		tr = { x: tr.x - ajuste, y: tr.y + ajuste };
-		br = { x: br.x - ajuste, y: br.y - ajuste };
-		bl = { x: bl.x + ajuste, y: bl.y - ajuste };
+		// orientación con la covarianza (ejes principales), limitada a ±45º para que
+		// el eje u sea siempre el más horizontal y las esquinas queden bien etiquetadas
+		let sxx = 0, sxy = 0, syy = 0;
+		const us = new Float64Array(n);
+		const vs = new Float64Array(n);
+		for (let y = 0; y < mh; y++) {
+			for (let x = 0; x < mw; x++) {
+				if (etiquetas[y * mw + x] != mejor)
+					continue;
+				const dx = x - cx;
+				const dy = y - cy;
+				sxx += dx * dx;
+				sxy += dx * dy;
+				syy += dy * dy;
+			}
+		}
+		let angulo = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+		if (angulo > Math.PI / 4)
+			angulo -= Math.PI / 2;
+		else if (angulo < -Math.PI / 4)
+			angulo += Math.PI / 2;
+		const cos = Math.cos(angulo);
+		const sin = Math.sin(angulo);
+
+		// proyectar las celdas sobre los ejes
+		let i = 0;
+		for (let y = 0; y < mh; y++) {
+			for (let x = 0; x < mw; x++) {
+				if (etiquetas[y * mw + x] != mejor)
+					continue;
+				const dx = x - cx;
+				const dy = y - cy;
+				us[i] = dx * cos + dy * sin;
+				vs[i] = -dx * sin + dy * cos;
+				i++;
+			}
+		}
+		us.sort();
+		vs.sort();
+
+		const cuantil = 0.02;
+		const corte = Math.floor(n * cuantil);
+		let u0 = us[corte], u1 = us[n - 1 - corte];
+		let v0 = vs[corte], v1 = vs[n - 1 - corte];
+
+		// deshacer el recorte del cuantil (en un bloque lleno el cuantil q entra q·anchura)
+		// y compensar la expansión de la dilatación en cada lado
+		const margenU = (u1 - u0) / (1 - 2 * cuantil) * cuantil - dilataciones;
+		const margenV = (v1 - v0) / (1 - 2 * cuantil) * cuantil - dilataciones;
+		u0 -= margenU;
+		u1 += margenU;
+		v0 -= margenV;
+		v1 += margenV;
 
 		// pasar de celdas de la máscara a coordenadas de la imagen
-		return [tl, tr, br, bl].map(p => ({ x: (p.x + 0.5) * factor, y: (p.y + 0.5) * factor }));
+		const esquina = (u, v) => ({
+			x: (cx + u * cos - v * sin + 0.5) * factor,
+			y: (cy + u * sin + v * cos + 0.5) * factor,
+		});
+		return [esquina(u0, v0), esquina(u1, v0), esquina(u1, v1), esquina(u0, v1)];
 	}
 
 	/**
@@ -367,9 +447,13 @@ function CodigoWorker() {
 		const rectaIzq = AjustarRecta(puntosLado(tl, bl, false, true));
 		const rectaDer = AjustarRecta(puntosLado(tr, br, false, false));
 
+		// se informa de cuántos lados tienen el borde real bien ajustado, como
+		// medida de la confianza en la detección
+		const lados = [rectaSup, rectaInf, rectaIzq, rectaDer].filter(Boolean).length;
+
 		// si algún lado no es fiable, quedarse con las esquinas aproximadas
-		if (!rectaSup || !rectaInf || !rectaIzq || !rectaDer)
-			return esquinas;
+		if (lados < 4)
+			return { esquinas, lados };
 
 		// la esquina es la intersección de las rectas horizontal (y = h0 + h1·x) y vertical (x = v0 + v1·y)
 		function interseccion(recH, recV) {
@@ -377,12 +461,15 @@ function CodigoWorker() {
 			return { x: recV[0] + recV[1] * y, y };
 		}
 
-		return [
-			interseccion(rectaSup, rectaIzq),
-			interseccion(rectaSup, rectaDer),
-			interseccion(rectaInf, rectaDer),
-			interseccion(rectaInf, rectaIzq),
-		];
+		return {
+			lados,
+			esquinas: [
+				interseccion(rectaSup, rectaIzq),
+				interseccion(rectaSup, rectaDer),
+				interseccion(rectaInf, rectaDer),
+				interseccion(rectaInf, rectaIzq),
+			],
+		};
 	}
 
 	function Distancia(p1, p2) {
@@ -422,13 +509,31 @@ function CodigoWorker() {
 		const izquierda = Distancia(tl, bl);
 		const derecha = Distancia(tr, br);
 
-		// los lados opuestos deben ser parecidos y la proporción similar a la de un DNI apaisado;
+		// los lados opuestos deben ser parecidos y la proporción similar a la de un DNI;
 		// si no, aplicamos solo el encuadre sin corregir la perspectiva
 		const proporcion = (arriba + abajo) / (izquierda + derecha);
+		const apaisada = proporcion >= 1;
+		const proporcionNormal = apaisada ? proporcion : 1 / proporcion;
+		// un DNI es 1.586; el margen restante cubre la deformación por perspectiva
 		if (Math.min(arriba, abajo) / Math.max(arriba, abajo) < 0.7 ||
 			Math.min(izquierda, derecha) / Math.max(izquierda, derecha) < 0.7 ||
-			proporcion < 1.1 || proporcion > 2.4)
+			proporcionNormal < 1.38 || proporcionNormal > 1.85)
 			return { tarjeta };
+
+		// más de ~35º de inclinación no es una foto normal de un DNI, sino algún
+		// elemento diagonal de la imagen que ha pasado los filtros anteriores
+		const inclinacion = Math.abs(Math.atan2(tr.y - tl.y, tr.x - tl.x)) * 180 / Math.PI;
+		if (Math.min(inclinacion, 180 - inclinacion) > 35)
+			return { tarjeta };
+
+		// una tarjeta vertical (típico de un escaneo girado) se acepta reordenando las
+		// esquinas, con lo que el enderezado la deja apaisada de paso; al venir de
+		// escaneos sin apenas perspectiva, la proporción se exige más estricta
+		if (!apaisada) {
+			if (proporcionNormal < 1.45 || proporcionNormal > 1.75)
+				return { tarjeta };
+			return { tarjeta, esquinas: [esquinas[3], esquinas[0], esquinas[1], esquinas[2]] };
+		}
 
 		// si las esquinas ya están casi en las esquinas del recuadro, no hace falta enderezar nada
 		const rectas = [
@@ -450,7 +555,7 @@ function CodigoWorker() {
 	* y sus 4 esquinas si además conviene corregir la perspectiva.
 	*/
 	function DetectarTarjeta(imgPixels) {
-		const fondo = EstimarFondo(imgPixels);
+		const fondos = FondosCandidatos(imgPixels);
 
 		// el contraste tarjeta-fondo varía mucho entre fotos (una tarjeta clara sobre una
 		// mesa blanca apenas contrasta): se prueba de mayor a menor exigencia y nos
@@ -458,23 +563,91 @@ function CodigoWorker() {
 		// primero con apertura (que despega del DNI las letras o dibujos del fondo);
 		// sin ella de reserva, porque una tarjeta que apenas contrasta da una máscara
 		// con claros que la erosión podría romper
+		const area = tarjeta => tarjeta.w * tarjeta.h;
+		const areaImagen = imgPixels.width * imgPixels.height;
 		let recuadro = null;
-		for (const conApertura of [true, false]) {
-			for (const umbral of [40, 20, 10]) {
-				const deteccion = DetectarConUmbral(imgPixels, fondo, umbral, conApertura);
-				if (!deteccion)
-					continue;
-				if (deteccion.esquinas)
-					return deteccion;
+		let esquinasPequenas = null;
+		for (const fondo of fondos) {
+			for (const conApertura of [true, false]) {
+				for (const umbral of [40, 20, 10]) {
+					const deteccion = DetectarConUmbral(imgPixels, fondo, umbral, conApertura);
+					if (!deteccion)
+						continue;
 
-				// si nada da esquinas, recordamos el mejor recuadro:
-				// el primero con la proporción de una tarjeta, o el primero que haya
-				const proporcion = deteccion.tarjeta.w / deteccion.tarjeta.h;
-				if (!recuadro || (proporcion > 1.1 && proporcion < 2.4 && !recuadro.plausible))
-					recuadro = { tarjeta: deteccion.tarjeta, plausible: proporcion > 1.1 && proporcion < 2.4 };
+					if (deteccion.esquinas) {
+						// una detección con un tamaño normal es definitiva; una pequeña
+						// puede ser un elemento interior (la foto de la cara de un
+						// escaneo) y se contrasta luego con los recuadros encontrados
+						if (area(deteccion.tarjeta) >= areaImagen * 0.15)
+							return deteccion;
+						if (!esquinasPequenas)
+							esquinasPequenas = deteccion;
+						continue;
+					}
+
+					// si nada da esquinas, recordamos el mejor recuadro: el de proporción
+					// más cercana a la de un DNI, o el primero que haya
+					const proporcion = deteccion.tarjeta.w / deteccion.tarjeta.h;
+					const puntuacion = proporcion > 1.1 && proporcion < 2.4 ? Math.abs(proporcion - 1.586) : 99;
+					if (!recuadro || puntuacion < recuadro.puntuacion)
+						recuadro = { tarjeta: deteccion.tarjeta, puntuacion };
+				}
 			}
 		}
+
+		// unas esquinas pequeñas solo valen si no hay un recuadro bastante mayor
+		// que sugiera que el documento real es otro
+		if (esquinasPequenas && (!recuadro || area(esquinasPequenas.tarjeta) >= area(recuadro.tarjeta) * 0.5))
+			return esquinasPequenas;
 		return recuadro && { tarjeta: recuadro.tarjeta };
+	}
+
+	/**
+	* Recuadro que abarca todas las celdas del bloque, compensando la dilatación.
+	* Sirve de encuadre de reserva: a diferencia del rectángulo por cuantiles,
+	* no recorta los bloques dispersos (como el contenido impreso de la tarjeta)
+	*/
+	function ExtensionComponente(m, etiquetas, mejor, dilataciones) {
+		const { mw, mh, factor } = m;
+		let minX = mw, maxX = 0, minY = mh, maxY = 0;
+		for (let y = 0; y < mh; y++) {
+			for (let x = 0; x < mw; x++) {
+				if (etiquetas[y * mw + x] != mejor)
+					continue;
+				if (x < minX) minX = x;
+				if (x > maxX) maxX = x;
+				if (y < minY) minY = y;
+				if (y > maxY) maxY = y;
+			}
+		}
+		return {
+			x: (minX + dilataciones) * factor,
+			y: (minY + dilataciones) * factor,
+			w: (maxX - minX + 1 - 2 * dilataciones) * factor,
+			h: (maxY - minY + 1 - 2 * dilataciones) * factor,
+		};
+	}
+
+	/**
+	* Cuántas de las 4 esquinas de la foto contienen celdas del bloque indicado
+	*/
+	function EsquinasFotoOcupadas(m, etiquetas, mejor) {
+		const { mw, mh } = m;
+		const lado = Math.max(2, Math.round(Math.min(mw, mh) * 0.08));
+		let ocupadas = 0;
+		[[0, 0], [mw - lado, 0], [0, mh - lado], [mw - lado, mh - lado]].forEach(function ([x0, y0]) {
+			let celdas = 0;
+			for (let y = y0; y < y0 + lado; y++) {
+				for (let x = x0; x < x0 + lado; x++) {
+					if (etiquetas[y * mw + x] == mejor)
+						celdas++;
+				}
+			}
+			// la esquina cuenta como ocupada si el bloque cubre la mayor parte de ella
+			if (celdas > lado * lado * 0.6)
+				ocupadas++;
+		});
+		return ocupadas;
 	}
 
 	/**
@@ -499,18 +672,59 @@ function CodigoWorker() {
 		if (!mejor || tam < m.mw * m.mh * 0.04)
 			return null;
 
+		// un bloque que cubre 3+ esquinas de la foto no puede ser la tarjeta, porque
+		// las esquinas se consideran fondo (se permiten 2 por los fondos con degradado,
+		// donde una parte del fondo sí contrasta con el tono estimado)
+		if (EsquinasFotoOcupadas(m, etiquetas, mejor) >= 3)
+			return null;
+
 		// dos pasadas de refinado: la primera acerca las esquinas al borde real y la segunda,
 		// con la franja de búsqueda ya bien centrada, las deja clavadas
 		let esquinas = EsquinasComponente(m, etiquetas, mejor, dilataciones);
-		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo, umbral);
-		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo, umbral);
+		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo, umbral).esquinas;
+		const refinado = RefinarEsquinas(imgPixels, esquinas, fondo, umbral);
+		esquinas = refinado.esquinas;
 
 		// las intersecciones de las rectas pueden quedar algo fuera de la imagen, las limitamos
 		esquinas = esquinas.map(p => ({
 			x: Math.min(Math.max(p.x, 0), imgPixels.width),
 			y: Math.min(Math.max(p.y, 0), imgPixels.height),
 		}));
-		return ValidarEsquinas(esquinas, imgPixels.width, imgPixels.height);
+
+		// un lado apoyado en el borde de la foto no es un borde real de la tarjeta
+		// (fuera no hay imagen con la que contrastar), y 2+ esquinas recortadas al
+		// limitar son extrapolaciones sin base: en ambos casos las esquinas no valen,
+		// aunque el recuadro que delimitan sigue sirviendo de encuadre aproximado
+		let bordeApoyado = false;
+		let recortadas = 0;
+		for (let i = 0; i < 4; i++) {
+			const a = esquinas[i];
+			const b = esquinas[(i + 1) % 4];
+			if ((a.x <= 1 && b.x <= 1) || (a.x >= imgPixels.width - 1 && b.x >= imgPixels.width - 1) ||
+				(a.y <= 1 && b.y <= 1) || (a.y >= imgPixels.height - 1 && b.y >= imgPixels.height - 1))
+				bordeApoyado = true;
+			if (a.x <= 0 || a.x >= imgPixels.width || a.y <= 0 || a.y >= imgPixels.height)
+				recortadas++;
+		}
+
+		let resultado = ValidarEsquinas(esquinas, imgPixels.width, imgPixels.height);
+		if (!resultado)
+			return null;
+		if (bordeApoyado || recortadas >= 2)
+			resultado.esquinas = null;
+
+		// solo con los 4 lados bien ajustados al borde real la detección es fiable;
+		// si no, las esquinas son en parte una estimación y es mejor quedarse con un
+		// encuadre (la extensión completa del bloque) y que la persona ponga los puntos
+		if (!resultado.esquinas || refinado.lados < 4)
+			resultado = { tarjeta: ExtensionComponente(m, etiquetas, mejor, dilataciones) };
+
+		// una tarjeta no puede ocupar prácticamente toda la foto: o es el fondo entero
+		// colándose como bloque, o es una foto ya recortada al DNI donde no hay nada
+		// que detectar (y los puntos por defecto ya aciertan)
+		if (resultado.tarjeta.w * resultado.tarjeta.h > imgPixels.width * imgPixels.height * 0.92)
+			return null;
+		return resultado;
 	}
 
 	/**

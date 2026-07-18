@@ -307,169 +307,160 @@ function CodigoWorker() {
 		return muestras[muestras.length >> 1];
 	}
 
-	function RefinarEsquinas(imgPixels, esquinas, fondo, umbralMascara) {
+	/**
+	* Afinar las esquinas buscando el borde real de cada lado con un barrido de rectas:
+	* alrededor del segmento entre esquinas se prueban rectas desplazadas e inclinadas
+	* y gana la que maximiza el gradiente coherente de la imagen a través de ella.
+	* No depende de un tono global de fondo, por lo que funciona con fondos de varias
+	* superficies, con viñeteado o con bordes muy tenues como los de un escaneo.
+	* La esquina final es la intersección de las rectas de los dos lados contiguos,
+	* con lo que el redondeo de las esquinas del DNI no la desplaza.
+	*/
+	function RefinarEsquinas(imgPixels, esquinas, barridoAmplio) {
 		const w = imgPixels.width;
 		const h = imgPixels.height;
 		const data = imgPixels.data;
-
-		// umbral más sensible que el de la máscara para pillar también bordes débiles,
-		// que no da problemas porque solo se busca en la franja alrededor del segmento
-		const umbral = Math.min(25, umbralMascara);
-		const franja = 25;
 		const tonoTarjeta = TonoInterior(imgPixels, esquinas);
-		const margenTono = 35;
+		const margenTono = 40;
+		const grado = Math.PI / 180;
 
-		function contrasta(x, y) {
-			if (x < 0 || y < 0 || x >= w || y >= h)
-				return false;
-			return Math.abs(data[(y * w + x) * 4] - fondo) > umbral;
+		function gris(x, y) {
+			if (x < 0) x = 0; else if (x > w - 1) x = w - 1;
+			if (y < 0) y = 0; else if (y > h - 1) y = h - 1;
+			return data[((y | 0) * w + (x | 0)) * 4];
 		}
 
-		function pareceTarjeta(x, y) {
-			if (x < 0 || y < 0 || x >= w || y >= h)
-				return false;
-			return Math.abs(data[(y * w + x) * 4] - tonoTarjeta) <= margenTono;
-		}
+		// en la primera pasada el barrido es amplio para poder corregir un encuadre
+		// aproximado; en la segunda solo se apura alrededor del resultado anterior
+		const maxDesplazamiento = barridoAmplio ? 56 : 12;
+		const maxGiro = (barridoAmplio ? 12 : 3) * grado;
 
 		/**
-		* Puntos del borde de un lado. Primero se exige que tras el borde venga el tono
-		* de la tarjeta (lo que descarta sombras pegadas y vetas del fondo); si así no
-		* se cubre suficiente lado (por ejemplo con una banda oscura impresa hasta el
-		* borde), se reintenta pidiendo solo contraste sostenido con el fondo.
+		* Mejor recta para un lado: para cada candidata se suma el gradiente a través
+		* de ella (fuera menos dentro). Un borde real da una suma alta y coherente en
+		* signo a lo largo de todo el lado; una textura del fondo se cancela.
 		*/
-		function puntosLado(pa, pb, porColumnas, desdeElPrincipio) {
-			const conTono = EscanearLado(pa, pb, porColumnas, desdeElPrincipio, true);
-			if (conTono.cobertura >= 0.35)
-				return conTono;
-			return EscanearLado(pa, pb, porColumnas, desdeElPrincipio, false);
-		}
+		function MejorRecta(pa, pb) {
+			const dx = pb.x - pa.x;
+			const dy = pb.y - pa.y;
+			const largo = Math.hypot(dx, dy);
+			if (largo < 20)
+				return null;
+			// normal unitaria hacia fuera (los lados se recorren en sentido horario)
+			const nx = dy / largo;
+			const ny = -dx / largo;
 
-		/**
-		* Para cada posición entre las dos esquinas (descartando un 15% en cada extremo
-		* por el redondeo) se busca desde fuera el primer píxel con contraste dentro de
-		* la franja que dé paso, de forma sostenida, al interior de la tarjeta.
-		* porColumnas recorre x buscando en y (lados horizontales) o al revés.
-		*/
-		function EscanearLado(pa, pb, porColumnas, desdeElPrincipio, usarTono) {
-			const ua = porColumnas ? pa.x : pa.y;
-			const ub = porColumnas ? pb.x : pb.y;
-			const va = porColumnas ? pa.y : pa.x;
-			const vb = porColumnas ? pb.y : pb.x;
-
-			const esInterior = usarTono ? pareceTarjeta : contrasta;
-
+			// puntos de muestreo, descartando un 12% en cada extremo por el redondeo
+			const muestras = 48;
 			const puntos = [];
-			const margen = Math.abs(ub - ua) * 0.15;
-			const u0 = Math.round(Math.min(ua, ub) + margen);
-			const u1 = Math.round(Math.max(ua, ub) - margen);
-			for (let u = u0; u <= u1; u += 2) {
-				const vSegmento = va + (vb - va) * (u - ua) / (ub - ua);
-				const vInicio = Math.round(desdeElPrincipio ? vSegmento - franja : vSegmento + franja);
-				const paso = desdeElPrincipio ? 1 : -1;
-				for (let i = 0; i <= franja * 2; i++) {
-					const v = vInicio + i * paso;
-					if (porColumnas ? contrasta(u, v) : contrasta(v, u)) {
-						// si ya hay contraste en el primer píxel es que la franja está dentro
-						// de la tarjeta y no estamos viendo el borde: no vale como punto
-						if (i == 0)
-							break;
+			for (let i = 0; i < muestras; i++) {
+				const t = 0.12 + 0.76 * i / (muestras - 1);
+				puntos.push({
+					x: pa.x + dx * t,
+					y: pa.y + dy * t,
+					brazo: (t - 0.5) * largo,
+				});
+			}
 
-						// tras el borde debe venir el interior de forma sostenida:
-						// un par de píxeles sueltos (una veta del fondo) no valen
-						let dentro = 0;
-						for (let k = 1; k <= 8; k++) {
-							const vk = v + paso * k;
-							if (porColumnas ? esInterior(u, vk) : esInterior(vk, u))
-								dentro++;
-						}
-						if (dentro >= 7) {
-							puntos.push({ u, v });
-							break;
-						}
+			function puntuar(desplazamiento, giro) {
+				let suma = 0;
+				let sumaAbs = 0;
+				for (const p of puntos) {
+					const d = desplazamiento + giro * p.brazo;
+					const x = p.x + nx * d;
+					const y = p.y + ny * d;
+					// el peso baja si el interior de esta recta no parece tarjeta, para
+					// no engancharse a sombras o a elementos del fondo o del contenido
+					const interior = gris(x - nx * 6, y - ny * 6);
+					const peso = Math.abs(interior - tonoTarjeta) <= margenTono ? 1 : 0.15;
+					const gradiente = (gris(x + nx * 2, y + ny * 2) - gris(x - nx * 2, y - ny * 2)) * peso;
+					suma += gradiente;
+					sumaAbs += Math.abs(gradiente);
+				}
+				return { valor: Math.abs(suma) / puntos.length, coherencia: sumaAbs > 1 ? Math.abs(suma) / sumaAbs : 0 };
+			}
+
+			// barrido en fases: una rejilla gruesa y dos apurados alrededor del mejor
+			let mejor = { valor: -1, d: 0, g: 0 };
+			const explorar = (centroD, radioD, pasoD, centroG, radioG, pasoG) => {
+				for (let d = centroD - radioD; d <= centroD + radioD; d += pasoD) {
+					for (let g = centroG - radioG; g <= centroG + radioG; g += pasoG) {
+						const p = puntuar(d, g);
+						if (p.valor > mejor.valor)
+							mejor = { valor: p.valor, coherencia: p.coherencia, d, g };
+					}
+				}
+			};
+			explorar(0, maxDesplazamiento, 3, 0, maxGiro, 1.5 * grado);
+
+			// entre las candidatas comparables gana la más exterior: el contenido
+			// impreso de la tarjeta (que también da rectas fuertes) siempre queda por
+			// dentro del borde real, aunque este tenga menos contraste
+			const minimo = Math.max(6, mejor.valor * 0.55);
+			buscarExterior:
+			for (let d = maxDesplazamiento; d >= -maxDesplazamiento; d -= 3) {
+				for (let g = -maxGiro; g <= maxGiro; g += 1.5 * grado) {
+					const p = puntuar(d, g);
+					if (p.valor >= minimo && p.coherencia >= 0.6) {
+						mejor = { valor: p.valor, coherencia: p.coherencia, d, g };
+						break buscarExterior;
 					}
 				}
 			}
-			return { puntos, cobertura: puntos.length / Math.max(1, (u1 - u0) / 2) };
-		}
 
-		/**
-		* Ajuste de recta v = a + b·u por mínimos cuadrados de forma iterativa:
-		* en cada pasada se descartan los puntos que se alejan del ajuste anterior
-		* (sombras, brillos o ruido en el borde) y se vuelve a calcular
-		*/
-		function AjustarRecta(lado) {
-			function calcular(pts) {
-				let su = 0, sv = 0, suu = 0, suv = 0;
-				pts.forEach(p => {
-					su += p.u;
-					sv += p.v;
-					suu += p.u * p.u;
-					suv += p.u * p.v;
-				});
-				const n = pts.length;
-				const den = n * suu - su * su;
-				if (Math.abs(den) < 1e-9)
-					return null;
-				const b = (n * suv - su * sv) / den;
-				return [(sv - b * su) / n, b];
-			}
+			explorar(mejor.d, 3, 1, mejor.g, 1.5 * grado, 0.4 * grado);
+			explorar(mejor.d, 1, 0.5, mejor.g, 0.4 * grado, 0.15 * grado);
 
-			// exigir haber encontrado el borde en una parte razonable del lado
-			if (lado.cobertura < 0.35 || lado.puntos.length < 10)
+			// el borde debe tener un gradiente medio apreciable y del mismo sentido
+			if (mejor.valor < 6 || mejor.coherencia < 0.6)
 				return null;
 
-			let puntos = lado.puntos;
-			let recta = calcular(puntos);
-			if (!recta)
-				return null;
-
-			for (let pasada = 0; pasada < 3; pasada++) {
-				const residuos = puntos.map(p => Math.abs(p.v - (recta[0] + recta[1] * p.u)));
-				const ordenados = [...residuos].sort((a, b) => a - b);
-				const limite = Math.max(2, ordenados[ordenados.length >> 1] * 2);
-				const cerca = puntos.filter((p, i) => residuos[i] <= limite);
-				// si hay que descartar demasiados puntos es que esto no es un borde recto
-				if (cerca.length < lado.puntos.length * 0.5)
-					return null;
-
-				const nueva = calcular(cerca);
-				if (!nueva)
-					return null;
-				recta = nueva;
-				puntos = cerca;
-			}
-			return recta;
+			// dos puntos de la recta ganadora, para poder intersecarla después
+			const punto = t => {
+				const d = mejor.d + mejor.g * (t - 0.5) * largo;
+				return { x: pa.x + dx * t + nx * d, y: pa.y + dy * t + ny * d };
+			};
+			return { a: punto(0), b: punto(1) };
 		}
 
 		const [tl, tr, br, bl] = esquinas;
-		const rectaSup = AjustarRecta(puntosLado(tl, tr, true, true));
-		const rectaInf = AjustarRecta(puntosLado(bl, br, true, false));
-		const rectaIzq = AjustarRecta(puntosLado(tl, bl, false, true));
-		const rectaDer = AjustarRecta(puntosLado(tr, br, false, false));
+		const rectas = [
+			MejorRecta(tl, tr),
+			MejorRecta(tr, br),
+			MejorRecta(br, bl),
+			MejorRecta(bl, tl),
+		];
 
 		// se informa de cuántos lados tienen el borde real bien ajustado, como
 		// medida de la confianza en la detección
-		const lados = [rectaSup, rectaInf, rectaIzq, rectaDer].filter(Boolean).length;
+		const lados = rectas.filter(Boolean).length;
 
 		// si algún lado no es fiable, quedarse con las esquinas aproximadas
 		if (lados < 4)
 			return { esquinas, lados };
 
-		// la esquina es la intersección de las rectas horizontal (y = h0 + h1·x) y vertical (x = v0 + v1·y)
-		function interseccion(recH, recV) {
-			const y = (recH[0] + recH[1] * recV[0]) / (1 - recH[1] * recV[1]);
-			return { x: recV[0] + recV[1] * y, y };
+		// intersección de dos rectas dadas por dos puntos cada una
+		function interseccion(r1, r2) {
+			const d1x = r1.b.x - r1.a.x;
+			const d1y = r1.b.y - r1.a.y;
+			const d2x = r2.b.x - r2.a.x;
+			const d2y = r2.b.y - r2.a.y;
+			const den = d1x * d2y - d1y * d2x;
+			if (Math.abs(den) < 1e-9)
+				return null;
+			const t = ((r2.a.x - r1.a.x) * d2y - (r2.a.y - r1.a.y) * d2x) / den;
+			return { x: r1.a.x + d1x * t, y: r1.a.y + d1y * t };
 		}
 
-		return {
-			lados,
-			esquinas: [
-				interseccion(rectaSup, rectaIzq),
-				interseccion(rectaSup, rectaDer),
-				interseccion(rectaInf, rectaDer),
-				interseccion(rectaInf, rectaIzq),
-			],
-		};
+		const nuevas = [
+			interseccion(rectas[3], rectas[0]),
+			interseccion(rectas[0], rectas[1]),
+			interseccion(rectas[1], rectas[2]),
+			interseccion(rectas[2], rectas[3]),
+		];
+		if (nuevas.some(p => !p))
+			return { esquinas, lados: 0 };
+		return { esquinas: nuevas, lados };
 	}
 
 	function Distancia(p1, p2) {
@@ -680,13 +671,35 @@ function CodigoWorker() {
 
 		// dos pasadas de refinado: la primera acerca las esquinas al borde real y la segunda,
 		// con la franja de búsqueda ya bien centrada, las deja clavadas
-		let esquinas = EsquinasComponente(m, etiquetas, mejor, dilataciones);
-		esquinas = RefinarEsquinas(imgPixels, esquinas, fondo, umbral).esquinas;
-		const refinado = RefinarEsquinas(imgPixels, esquinas, fondo, umbral);
-		esquinas = refinado.esquinas;
+		const esquinas = EsquinasComponente(m, etiquetas, mejor, dilataciones);
+		let resultado = AfinarYValidar(imgPixels, esquinas);
+
+		// sin unas esquinas fiables es mejor quedarse con un encuadre (la extensión
+		// completa del bloque) y que la persona coloque los puntos
+		if (!resultado || !resultado.esquinas)
+			resultado = { tarjeta: ExtensionComponente(m, etiquetas, mejor, dilataciones) };
+
+		// una tarjeta no puede ocupar prácticamente toda la foto: o es el fondo entero
+		// colándose como bloque, o es una foto ya recortada al DNI donde no hay nada
+		// que detectar (y los puntos por defecto ya aciertan)
+		if (resultado.tarjeta.w * resultado.tarjeta.h > imgPixels.width * imgPixels.height * 0.92)
+			return null;
+		return resultado;
+	}
+
+	/**
+	* Afinar unas esquinas aproximadas con el barrido de rectas y validar el resultado.
+	* Devuelve esquinas solo si los 4 lados quedaron bien ajustados al borde real y
+	* el cuadrilátero pasa todas las comprobaciones; si no, el recuadro o null.
+	*/
+	function AfinarYValidar(imgPixels, aproximadas) {
+		const primera = RefinarEsquinas(imgPixels, aproximadas, true);
+		// la segunda pasada apura con la franja ya centrada, o repite el barrido
+		// amplio si la primera no encontró los lados
+		const refinado = RefinarEsquinas(imgPixels, primera.esquinas, primera.lados < 4);
 
 		// las intersecciones de las rectas pueden quedar algo fuera de la imagen, las limitamos
-		esquinas = esquinas.map(p => ({
+		const esquinas = refinado.esquinas.map(p => ({
 			x: Math.min(Math.max(p.x, 0), imgPixels.width),
 			y: Math.min(Math.max(p.y, 0), imgPixels.height),
 		}));
@@ -707,23 +720,11 @@ function CodigoWorker() {
 				recortadas++;
 		}
 
-		let resultado = ValidarEsquinas(esquinas, imgPixels.width, imgPixels.height);
+		const resultado = ValidarEsquinas(esquinas, imgPixels.width, imgPixels.height);
 		if (!resultado)
 			return null;
-		if (bordeApoyado || recortadas >= 2)
+		if (bordeApoyado || recortadas >= 2 || refinado.lados < 4)
 			resultado.esquinas = null;
-
-		// solo con los 4 lados bien ajustados al borde real la detección es fiable;
-		// si no, las esquinas son en parte una estimación y es mejor quedarse con un
-		// encuadre (la extensión completa del bloque) y que la persona ponga los puntos
-		if (!resultado.esquinas || refinado.lados < 4)
-			resultado = { tarjeta: ExtensionComponente(m, etiquetas, mejor, dilataciones) };
-
-		// una tarjeta no puede ocupar prácticamente toda la foto: o es el fondo entero
-		// colándose como bloque, o es una foto ya recortada al DNI donde no hay nada
-		// que detectar (y los puntos por defecto ya aciertan)
-		if (resultado.tarjeta.w * resultado.tarjeta.h > imgPixels.width * imgPixels.height * 0.92)
-			return null;
 		return resultado;
 	}
 

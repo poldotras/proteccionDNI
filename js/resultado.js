@@ -156,8 +156,8 @@ function GenerarLupas() {
 		const lupa = {
 			x: Math.random() * canvas.width,
 			y: Math.random() * canvas.height,
-			radio: 70 + Math.random() * 90,
-			zoom: 1.5 + Math.random(),
+			radio: 100 + Math.random() * 100,
+			zoom: 1.5 + Math.random() * 0.5,
 		};
 		if (lupas.every(otra => Math.hypot(lupa.x - otra.x, lupa.y - otra.y) >= 0.9 * (lupa.radio + otra.radio)))
 			lupas.push(lupa);

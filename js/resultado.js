@@ -130,13 +130,20 @@ function DibujarMascara() {
 	}
 }
 
-// Rotación de las marcas con angulo 'aleatorio': al azar entre -90º y 90º,
-// distinta en cada carga de la página para que las copias no sean predecibles
-const AnguloAleatorio = Math.round(Math.random() * 180) - 90;
+// Rotación de las marcas con angulo 'aleatorio' (al azar entre -90º y 90º) y
+// puntos de "lupa" que amplían la marca de agua alrededor de posiciones al azar
+let AnguloAleatorio;
+let Lupas;
+SortearMarcas();
 
-// Puntos de "lupa" que amplían la marca de agua alrededor de posiciones al azar,
-// deformando el texto de alrededor; como el ángulo, se sortean en cada carga
-const Lupas = GenerarLupas();
+/**
+Sortear de nuevo el ángulo y las lupas de la marca de agua; se hace al cargar
+cada foto y al cambiar el texto, para que las copias no sean predecibles
+*/
+function SortearMarcas() {
+	AnguloAleatorio = Math.round(Math.random() * 180) - 90;
+	Lupas = GenerarLupas();
+}
 
 // canvas auxiliar donde se dibuja cada pasada del texto antes de deformarla con las lupas
 const canvasCapaMarcas = document.createElement('canvas');

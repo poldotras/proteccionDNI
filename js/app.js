@@ -28,6 +28,7 @@ function MostrarImagen(file) {
 
 		MostrarEdicion();
 		tarjetaResultado = null;
+		SortearMarcas();
 
 		PrepararDNI(img)
 			.then(() => RedibujarDNI())
@@ -193,7 +194,10 @@ document.getElementById('ZonaElegir')
 	});
 });
 
-Watermark.addEventListener('input', () => DibujarMarcaAgua());
+Watermark.addEventListener('input', function () {
+	SortearMarcas();
+	DibujarMarcaAgua();
+});
 
 botonGrabar.addEventListener('click', GrabarImagen);
 

@@ -546,6 +546,13 @@ function CodigoWorker() {
 	* y sus 4 esquinas si además conviene corregir la perspectiva.
 	*/
 	function DetectarTarjeta(imgPixels) {
+		// una imagen con la proporción exacta de un DNI (ninguna cámara produce ese
+		// formato) es casi seguro una foto ya recortada a la tarjeta, como los
+		// ejemplos del repositorio: se toma entera, sin buscar nada dentro
+		const proporcionFoto = imgPixels.width / imgPixels.height;
+		if (proporcionFoto >= 1.55 && proporcionFoto <= 1.62)
+			return { tarjeta: { x: 0, y: 0, w: imgPixels.width, h: imgPixels.height } };
+
 		const fondos = FondosCandidatos(imgPixels);
 
 		// el contraste tarjeta-fondo varía mucho entre fotos (una tarjeta clara sobre una

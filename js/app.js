@@ -88,6 +88,9 @@ function PrepararDNI(img) {
 
 			DibujarEditorEsquinas();
 
+			// con una foto ya recortada a la tarjeta se ofrece buscar el DNI dentro
+			MostrarBotonDeteccion(!!respuesta.recortada);
+
 			// si la detección de esquinas es fiable, enderezar la tarjeta directamente
 			if (respuesta.esquinas)
 				return AplicarEsquinas();
@@ -195,6 +198,7 @@ Watermark.addEventListener('input', () => DibujarMarcaAgua());
 botonGrabar.addEventListener('click', GrabarImagen);
 
 configurarGiro();
+configurarDeteccionManual();
 configurarEditorEsquinas();
 configurarCompartir();
 configurarDD(document.body);

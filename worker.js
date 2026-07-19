@@ -545,13 +545,14 @@ function CodigoWorker() {
 	* Devuelve null si no hay detección fiable, o un objeto con el recuadro que delimita la tarjeta
 	* y sus 4 esquinas si además conviene corregir la perspectiva.
 	*/
-	function DetectarTarjeta(imgPixels) {
+	function DetectarTarjeta(imgPixels, forzar) {
 		// una imagen con la proporción exacta de un DNI (ninguna cámara produce ese
 		// formato) es casi seguro una foto ya recortada a la tarjeta, como los
-		// ejemplos del repositorio: se toma entera, sin buscar nada dentro
+		// ejemplos del repositorio: se toma entera, sin buscar nada dentro.
+		// Con forzar (el botón de detectar del editor) se busca de todas formas.
 		const proporcionFoto = imgPixels.width / imgPixels.height;
-		if (proporcionFoto >= 1.55 && proporcionFoto <= 1.62)
-			return { tarjeta: { x: 0, y: 0, w: imgPixels.width, h: imgPixels.height } };
+		if (!forzar && proporcionFoto >= 1.55 && proporcionFoto <= 1.62)
+			return { tarjeta: { x: 0, y: 0, w: imgPixels.width, h: imgPixels.height }, recortada: true };
 
 		const fondos = FondosCandidatos(imgPixels);
 
@@ -1164,6 +1165,7 @@ function CodigoWorker() {
 		let bitmapColor = null;
 		let esquinas = null;
 		let tarjeta = null;
+		let recortada = false;
 		try {
 			const imgPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
 			// guardamos una copia en color antes de convertir a blanco y negro
@@ -1178,6 +1180,7 @@ function CodigoWorker() {
 			if (deteccion) {
 				tarjeta = deteccion.tarjeta;
 				esquinas = deteccion.esquinas || null;
+				recortada = !!deteccion.recortada;
 			}
 
 			// para la salida se aclaran los negros sobre una copia; imagenGris mantiene
@@ -1189,7 +1192,7 @@ function CodigoWorker() {
 		}
 
 		const bitmap = canvas.transferToImageBitmap();
-		self.postMessage({ id: datos.id, bitmap, bitmapColor, esquinas, tarjeta });
+		self.postMessage({ id: datos.id, bitmap, bitmapColor, esquinas, tarjeta, recortada });
 	}
 
 	/**
@@ -1265,9 +1268,29 @@ function CodigoWorker() {
 		self.postMessage({ id: datos.id, bitmap: BitmapDeImageData(imagenGris), bitmapColor });
 	}
 
+	/**
+	* Repetir la detección sobre la última foto, forzándola aunque la imagen tenga
+	* la proporción de una tarjeta (el botón de detectar del editor)
+	*/
+	function ProcesarDeteccion(datos) {
+		if (!imagenGris) {
+			self.postMessage({ id: datos.id, esquinas: null, tarjeta: null });
+			return;
+		}
+
+		const deteccion = DetectarTarjeta(imagenGris, true);
+		self.postMessage({
+			id: datos.id,
+			esquinas: (deteccion && deteccion.esquinas) || null,
+			tarjeta: (deteccion && deteccion.tarjeta) || null,
+		});
+	}
+
 	self.addEventListener('message', e => {
 		if (e.data.bitmap)
 			ProcesarImagenNueva(e.data);
+		else if (e.data.detectar)
+			ProcesarDeteccion(e.data);
 		else if (e.data.esquinas)
 			ProcesarEnderezado(e.data);
 		else if (e.data.girar)

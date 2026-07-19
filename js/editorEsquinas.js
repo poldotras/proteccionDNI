@@ -244,6 +244,59 @@ function SolicitarEnderezado() {
 		});
 }
 
+// Copia de las esquinas previas al botón de detectar, para poder deshacer
+let esquinasAntesDeteccion = null;
+
+/**
+Botones de detección manual: cuando la foto se ha tomado entera por tener la
+proporción de una tarjeta, un botón permite buscar el DNI dentro de todas formas,
+y otro deshacer esa detección volviendo a la imagen completa
+*/
+function configurarDeteccionManual() {
+	const botonDetectar = document.getElementById('DetectarDNI');
+	const botonDeshacer = document.getElementById('DeshacerDeteccion');
+
+	botonDetectar.addEventListener('click', function () {
+		EnviarAlWorker({ detectar: true })
+			.then(function (respuesta) {
+				const nuevas = respuesta.esquinas ||
+					(respuesta.tarjeta && RectanguloAEsquinas(respuesta.tarjeta));
+				if (!nuevas) {
+					alert('No se ha encontrado el DNI dentro de la foto');
+					return;
+				}
+
+				esquinasAntesDeteccion = esquinasDNI;
+				esquinasDNI = nuevas;
+				botonDetectar.classList.add('Oculto');
+				botonDeshacer.classList.remove('Oculto');
+				DibujarEditorEsquinas();
+				SolicitarEnderezado();
+			})
+			.catch(error => console.error(error));
+	});
+
+	botonDeshacer.addEventListener('click', function () {
+		if (!esquinasAntesDeteccion)
+			return;
+
+		esquinasDNI = esquinasAntesDeteccion;
+		MostrarBotonDeteccion(true);
+		DibujarEditorEsquinas();
+		SolicitarEnderezado();
+	});
+}
+
+/**
+Mostrar u ocultar el botón de detectar (y esconder siempre el de deshacer),
+al cargar una foto nueva o al deshacer
+*/
+function MostrarBotonDeteccion(visible) {
+	esquinasAntesDeteccion = null;
+	document.getElementById('DetectarDNI').classList.toggle('Oculto', !visible);
+	document.getElementById('DeshacerDeteccion').classList.add('Oculto');
+}
+
 /**
 Giros de 90º de la imagen original
 */
@@ -273,6 +326,10 @@ function girarDNI(ev) {
 			esquinasDNI = giro > 0
 				? [giradas[3], giradas[0], giradas[1], giradas[2]]
 				: [giradas[1], giradas[2], giradas[3], giradas[0]];
+
+			// las esquinas guardadas para deshacer la detección ya no encajan
+			if (esquinasAntesDeteccion)
+				MostrarBotonDeteccion(true);
 
 			DibujarEditorEsquinas();
 			SolicitarEnderezado();

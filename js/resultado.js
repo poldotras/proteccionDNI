@@ -134,11 +134,42 @@ function DibujarMascara() {
 // distinta en cada carga de la página para que las copias no sean predecibles
 const AnguloAleatorio = Math.round(Math.random() * 180) - 90;
 
+// Puntos de "lupa" que amplían la marca de agua alrededor de posiciones al azar,
+// deformando el texto de alrededor; como el ángulo, se sortean en cada carga
+const Lupas = GenerarLupas();
+
+// canvas auxiliar donde se dibuja cada pasada del texto antes de deformarla con las lupas
+const canvasCapaMarcas = document.createElement('canvas');
+canvasCapaMarcas.width = canvas.width;
+canvasCapaMarcas.height = canvas.height;
+
+/**
+Sortear entre 3 y 5 lupas con posición, potencia de zoom y radio al azar.
+Deben quedar separadas entre sí al menos el 90% de la suma de sus radios;
+si una posición no cumple, se sortea otra (con un límite de intentos por si
+el azar no deja sitio para todas)
+*/
+function GenerarLupas() {
+	const cantidad = 3 + Math.floor(Math.random() * 3);
+	const lupas = [];
+	for (let intentos = 0; lupas.length < cantidad && intentos < 200; intentos++) {
+		const lupa = {
+			x: Math.random() * canvas.width,
+			y: Math.random() * canvas.height,
+			radio: 70 + Math.random() * 90,
+			zoom: 1.5 + Math.random(),
+		};
+		if (lupas.every(otra => Math.hypot(lupa.x - otra.x, lupa.y - otra.y) >= 0.9 * (lupa.radio + otra.radio)))
+			lupas.push(lupa);
+	}
+	return lupas;
+}
+
 /**
 Sobre escribir texto en las zonas que se definan para el formato elegido.
 La marca debe verse también por encima de los campos censurados en negro,
 así que se repite en blanco recortada a esos rectángulos, con la misma
-onda y ángulo para que las líneas tengan continuidad
+onda, ángulo y lupas para que las líneas tengan continuidad
 */
 function DibujarMarcaAgua() {
 	const ctx = canvasWatermark.getContext('2d');
@@ -148,20 +179,115 @@ function DibujarMarcaAgua() {
 	if (!texto)
 		return;
 
-	DibujarMarcas(ctx, texto);
+	ctx.drawImage(CapaMarcas(texto), 0, 0);
 
 	const bloques = BloquesCensurados();
 	if (!bloques.length)
 		return;
 
+	const capaBlanca = CapaMarcas(texto, 'rgb(255 255 255 / 40%)');
 	ctx.save();
 	ctx.beginPath();
 	bloques.forEach(bloque => ctx.roundRect(bloque.x, bloque.y, bloque.w, bloque.h, 5));
 	ctx.clip();
 	// dentro de los rectángulos solo queda el texto en blanco
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	DibujarMarcas(ctx, texto, 'rgb(255 255 255 / 40%)');
+	ctx.drawImage(capaBlanca, 0, 0);
 	ctx.restore();
+}
+
+/**
+Dibujar una pasada del texto en la capa auxiliar y devolverla ya deformada por las lupas
+*/
+function CapaMarcas(texto, estilo) {
+	const ctx = canvasCapaMarcas.getContext('2d');
+	ctx.clearRect(0, 0, canvasCapaMarcas.width, canvasCapaMarcas.height);
+	DibujarMarcas(ctx, texto, estilo);
+	AplicarLupas(canvasCapaMarcas);
+	return canvasCapaMarcas;
+}
+
+/**
+Deformar la capa con el efecto de cada lupa: cada píxel dentro del radio toma
+su color de una posición más cercana al centro (mapeo inverso), con la
+ampliación máxima en el centro decayendo en gradiente hasta ninguna en el borde
+*/
+function AplicarLupas(capa) {
+	const ctx = capa.getContext('2d');
+	Lupas.forEach(function (lupa) {
+		const x0 = Math.max(0, Math.floor(lupa.x - lupa.radio));
+		const y0 = Math.max(0, Math.floor(lupa.y - lupa.radio));
+		const x1 = Math.min(capa.width, Math.ceil(lupa.x + lupa.radio));
+		const y1 = Math.min(capa.height, Math.ceil(lupa.y + lupa.radio));
+		const w = x1 - x0;
+		const h = y1 - y0;
+		if (w <= 0 || h <= 0)
+			return;
+
+		const origen = ctx.getImageData(x0, y0, w, h);
+		const destino = ctx.createImageData(w, h);
+		const src = origen.data;
+		const dst = destino.data;
+
+		for (let py = 0; py < h; py++) {
+			for (let px = 0; px < w; px++) {
+				const dx = px + x0 - lupa.x;
+				const dy = py + y0 - lupa.y;
+				const distancia = Math.hypot(dx, dy);
+				const i = (py * w + px) * 4;
+
+				if (distancia >= lupa.radio) {
+					dst[i] = src[i];
+					dst[i + 1] = src[i + 1];
+					dst[i + 2] = src[i + 2];
+					dst[i + 3] = src[i + 3];
+					continue;
+				}
+
+				const caida = 1 - (distancia / lupa.radio) ** 2;
+				const factor = 1 + (lupa.zoom - 1) * caida * caida;
+				MuestraBilineal(src, w, h, lupa.x + dx / factor - x0, lupa.y + dy / factor - y0, dst, i);
+			}
+		}
+		ctx.putImageData(destino, x0, y0);
+	});
+}
+
+/**
+Copiar en dst[i] el color de la posición (sx, sy) con interpolación bilineal.
+Se interpola con el color premultiplicado por el alfa para que los píxeles
+transparentes no arrastren su color a los bordes de las letras
+*/
+function MuestraBilineal(src, w, h, sx, sy, dst, i) {
+	const xBase = Math.min(Math.max(Math.floor(sx), 0), w - 1);
+	const yBase = Math.min(Math.max(Math.floor(sy), 0), h - 1);
+	const xSig = Math.min(xBase + 1, w - 1);
+	const ySig = Math.min(yBase + 1, h - 1);
+	const fx = Math.min(Math.max(sx - xBase, 0), 1);
+	const fy = Math.min(Math.max(sy - yBase, 0), 1);
+
+	let r = 0, g = 0, b = 0, a = 0;
+	function Acumular(x, y, peso) {
+		if (!peso)
+			return;
+		const j = (y * w + x) * 4;
+		const alfa = src[j + 3] * peso;
+		r += src[j] * alfa;
+		g += src[j + 1] * alfa;
+		b += src[j + 2] * alfa;
+		a += alfa;
+	}
+	Acumular(xBase, yBase, (1 - fx) * (1 - fy));
+	Acumular(xSig, yBase, fx * (1 - fy));
+	Acumular(xBase, ySig, (1 - fx) * fy);
+	Acumular(xSig, ySig, fx * fy);
+
+	if (a) {
+		dst[i] = r / a;
+		dst[i + 1] = g / a;
+		dst[i + 2] = b / a;
+	}
+	dst[i + 3] = a;
 }
 
 /**

@@ -144,13 +144,13 @@ canvasCapaMarcas.width = canvas.width;
 canvasCapaMarcas.height = canvas.height;
 
 /**
-Sortear entre 3 y 5 lupas con posición, potencia de zoom y radio al azar.
+Sortear entre 5 y 7 lupas con posición, potencia de zoom y radio al azar.
 Deben quedar separadas entre sí al menos el 90% de la suma de sus radios;
 si una posición no cumple, se sortea otra (con un límite de intentos por si
 el azar no deja sitio para todas)
 */
 function GenerarLupas() {
-	const cantidad = 3 + Math.floor(Math.random() * 3);
+	const cantidad = 5 + Math.floor(Math.random() * 3);
 	const lupas = [];
 	for (let intentos = 0; lupas.length < cantidad && intentos < 200; intentos++) {
 		const lupa = {

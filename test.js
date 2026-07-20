@@ -97,18 +97,12 @@ function CambiarImagenTest(ev) {
 
 	nombreFichero = img.src;
 
-	MostrarEdicion();
-	tarjetaResultado = null;
-
 	// si el nombre coincide con el de un formato, seleccionarlo automáticamente
 	const match = /ejemplos\/(.*)\.webp/.exec(img.src);
 	if (match) {
-		ActualizarValorInput(Formato, match[1]);
+		Formato.value = match[1];
+		Formato.dispatchEvent(new Event('change'));
 	}
 
-	PrepararDNI(img)
-		.then(() => RedibujarDNI());
-
-	DibujarMascara();
-	DibujarMarcaAgua();
+	ComenzarEdicion(img);
 }

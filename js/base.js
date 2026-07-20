@@ -61,37 +61,3 @@ let tarjetaResultado = null;
 
 // Nombre del fichero elegido, para generar el nombre de la copia protegida
 let nombreFichero = '';
-
-//////////////////////////////////////
-//
-// Utilidades
-//
-//////////////////////////////////////
-
-/**
-Detecta click o que activamos un elemento mediante el teclado con espacio o la tecla de enter
-*/
-function activarClickConTeclado(elmto, callback) {
-	elmto.tabIndex = '0';
-	elmto.addEventListener('keydown', function (ev) {
-		if (ev.key == 'Enter' || ev.key == ' ')
-			callback(ev.currentTarget, ev);
-	});
-	elmto.addEventListener('click', ev => callback(ev.currentTarget, ev));
-}
-
-/**
-Asigna un valor a un input y dispara sus eventos como si lo hubiera cambiado el usuario
-*/
-function ActualizarValorInput(input, value) {
-	input.value = value;
-	input.dispatchEvent(new Event('input'));
-	input.dispatchEvent(new Event('change'));
-}
-
-/**
-Returns an Array with the result of a querySelectorAll call (a NodeList)
-*/
-function querySelector_Array(selector, root) {
-	return [].slice.call((root || document).querySelectorAll(selector));
-}

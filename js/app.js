@@ -12,10 +12,24 @@ Debe cargarse el último, cuando ya están definidos el resto de ficheros de js/
 //////////////////////////////////////
 
 /**
-Mostrar la zona de edición al cargar la primera foto
+Comenzar la edición con una imagen ya cargada: mostrar la zona de edición,
+sortear las marcas y preparar el DNI. Se usa al elegir una foto y también
+desde la galería de la página de pruebas
 */
-function MostrarEdicion() {
+function ComenzarEdicion(img) {
 	document.getElementById('Edicion').classList.remove('Oculto');
+	tarjetaResultado = null;
+	SortearMarcas();
+
+	PrepararDNI(img)
+		.then(() => RedibujarDNI())
+		.catch(error => {
+			alert('Error preparando DNI \r\n' + error);
+			console.error(error)
+		});
+
+	DibujarMascara();
+	DibujarMarcaAgua();
 }
 
 /**
@@ -25,20 +39,7 @@ function MostrarImagen(file) {
 	const img = new Image;
 	img.onload = function () {
 		URL.revokeObjectURL(img.src)
-
-		MostrarEdicion();
-		tarjetaResultado = null;
-		SortearMarcas();
-
-		PrepararDNI(img)
-			.then(() => RedibujarDNI())
-			.catch(error => {
-				alert('Error preparando DNI \r\n' + error);
-				console.error(error)
-			});
-
-		DibujarMascara();
-		DibujarMarcaAgua();
+		ComenzarEdicion(img);
 	}
 	img.onerror = function (e) {
 		console.log(e);
@@ -211,7 +212,7 @@ AsignarWatermarkPorDefecto(Watermark);
 // Enlaces de ayuda: si el navegador soporta el Popover API, la respuesta se muestra
 // sin salir de la página; si no, el propio enlace lleva a la pregunta en la portada
 if (HTMLElement.prototype.hasOwnProperty('popover')) {
-	querySelector_Array('.AbrirInfo[data-ayuda]')
+	document.querySelectorAll('.AbrirInfo[data-ayuda]')
 		.forEach(elmto => {
 			const respuesta = document.querySelector('#' + elmto.dataset.ayuda + ' .respuesta');
 			if (!respuesta)
@@ -224,7 +225,7 @@ if (HTMLElement.prototype.hasOwnProperty('popover')) {
 			elmto.parentNode.appendChild(popover);
 			elmto.popoverTargetElement = popover;
 
-			activarClickConTeclado(elmto, (target, ev) => {
+			elmto.addEventListener('click', ev => {
 				// no funciona bien, para cuando llegamos aquí el popover ya se ha cerrado por lo que se vuelve a mostrar
 				if (popover.matches(':popover-open'))
 					popover.hidePopover();
@@ -232,7 +233,7 @@ if (HTMLElement.prototype.hasOwnProperty('popover')) {
 					popover.showPopover();
 
 				// lo ponemos por debajo del enlace
-				const bb = target.getBoundingClientRect();
+				const bb = elmto.getBoundingClientRect();
 				popover.style.top = (bb.y + bb.height + 10) + 'px';
 
 				ev.preventDefault();

@@ -82,7 +82,7 @@ function ActualizarMarcoEsquinas() {
 	PoligonoEsquinas.classList.toggle('invalido', !EsConvexo(esquinasDNI));
 
 	// se posicionan tanto los círculos visibles como sus zonas de toque ampliadas
-	querySelector_Array('.esquina', MarcoEsquinas)
+	MarcoEsquinas.querySelectorAll('.esquina')
 		.forEach(function (circulo) {
 			const punto = puntos[circulo.dataset.indice];
 			circulo.setAttribute('cx', punto.x);
@@ -301,7 +301,7 @@ function MostrarBotonDeteccion(visible) {
 Giros de 90º de la imagen original
 */
 function configurarGiro() {
-	querySelector_Array('.girar')
+	document.querySelectorAll('.girar')
 		.forEach(boton => boton.addEventListener('click', girarDNI));
 }
 

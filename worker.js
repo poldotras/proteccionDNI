@@ -276,12 +276,6 @@ function CodigoWorker() {
 	}
 
 	/**
-	* Afinar las esquinas aproximadas trabajando sobre la imagen en gris a resolución completa.
-	* Para cada lado se busca el borde real de la tarjeta en una franja estrecha alrededor del
-	* segmento entre esquinas y se ajusta una recta; como el DNI tiene las esquinas redondeadas,
-	* la esquina buscada es la intersección de las rectas de los dos lados, no el borde en sí.
-	*/
-	/**
 	* Tono típico del interior de la tarjeta: la mediana de una rejilla de muestras
 	* alrededor del centro del cuadrilátero detectado
 	*/
@@ -303,8 +297,7 @@ function CodigoWorker() {
 					muestras.push(data[(y * imgPixels.width + x) * 4]);
 			}
 		}
-		muestras.sort((a, b) => a - b);
-		return muestras[muestras.length >> 1];
+		return Mediana(muestras);
 	}
 
 	/**
@@ -464,7 +457,7 @@ function CodigoWorker() {
 	}
 
 	function Distancia(p1, p2) {
-		return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+		return Math.hypot(p2.x - p1.x, p2.y - p1.y);
 	}
 
 	/**
@@ -1076,39 +1069,18 @@ function CodigoWorker() {
 
 	// Si la imagen parece estar en vertical, girarla automáticamente por defecto
 	function PonerHorizontal(img) {
-		let width = img.width;
-		let height = img.height;
-
-		if (height > width) {
-			const ancho = height;
-			const alto = width;
-			const canvasGiro = new OffscreenCanvas(ancho, alto);
-
+		if (img.height > img.width) {
+			const canvasGiro = new OffscreenCanvas(img.height, img.width);
 			const ctxRotado = canvasGiro.getContext('2d');
-			ctxRotado.clearRect(0, 0, ancho, alto);
-			// save the unrotated context of the canvas so we can restore it later
-			// the alternative is to untranslate & unrotate after drawing
-			ctxRotado.save();
-
-			// move to the center of the canvas
-			ctxRotado.translate(ancho / 2, alto / 2);
-
-			// rotate the canvas to the specified degrees
+			// rotar alrededor del centro del canvas destino
+			ctxRotado.translate(img.height / 2, img.width / 2);
 			ctxRotado.rotate(270 * Math.PI / 180);
-
-			// draw the image
-			// since the context is rotated, the image will be rotated also
-			ctxRotado.drawImage(img, - width / 2, - height / 2);
-
-			// we’re done with the rotating so restore the unrotated context
-			ctxRotado.restore();
-
+			ctxRotado.drawImage(img, -img.width / 2, -img.height / 2);
 			return canvasGiro;
 		}
 
 		const canvas = new OffscreenCanvas(img.width, img.height);
-		const ctxImagen = canvas.getContext('2d');
-		ctxImagen.drawImage(img, 0, 0);
+		canvas.getContext('2d').drawImage(img, 0, 0);
 		return canvas;
 	}
 

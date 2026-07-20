@@ -7,33 +7,56 @@
 	--colorBotonPrincipal: #FFFFFF;
 	--colorFondoBotonPrincipal: #0D6EFD;
 	--colorFondoBotonPrincipalHover: #0B5ED7;
-	/* colores para el wizard */
-	--mainColor: var(--colorFondoBotonPrincipal);
-	--baseColor: light-dark(#555, currentColor);
 	--colorAncla: light-dark(#555, #AAA);
 	--colorPie: light-dark(#EFEFEF, #333);
+	--colorFondoPagina: light-dark(#F2F5FA, #10141B);
+	--colorFondoTarjeta: light-dark(#FFF, #171B23);
+	--colorFondoSuave: light-dark(#F7F9FC, #1D2430);
+	--colorBorde: light-dark(#DFE6F0, #2C3442);
 }
 
 body {
-	font-family: Verdana, Sans-Serif;
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, sans-serif;
+	background-color: var(--colorFondoPagina);
 	margin: 0;
+	/* que la página ocupe como mínimo toda la pantalla, con el pie siempre abajo;
+	   dvh tiene en cuenta la barra del navegador en los móviles */
 	min-height: 100vh;
+	min-height: 100dvh;
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
 	interpolate-size: allow-keywords;
 }
 
 p {
-	line-height: 1.4;
+	line-height: 1.5;
 }
 
+/* el contenido principal se muestra como una tarjeta sobre el fondo de la página */
 main {
 	box-sizing: border-box;
-	margin: 0 auto;
-	max-width: 1020px;
-	padding: 0 10px;
-	width: 100%;
+	margin: 16px auto 24px;
+	width: min(1020px, 100% - 16px);
+	padding: 8px 16px 24px;
+	background-color: var(--colorFondoTarjeta);
+	border: 1px solid var(--colorBorde);
+	border-radius: 14px;
+	box-shadow: 0 8px 24px rgb(13 40 80 / .07);
+	/* el contenido crece para empujar el pie hasta abajo aunque la página sea corta */
+	flex: 1 0 auto;
+}
+
+/* título del editor y la página de pruebas (la portada usa el de la cabecera) */
+main > h1 {
+	text-align: center;
+	font-size: 1.6em;
+	margin: .6em 0;
+}
+
+main h2 {
+	text-align: center;
+	font-size: 1.5em;
+	margin: 1.6em 0 .6em;
 }
 
 label {
@@ -47,19 +70,6 @@ select {
 	font-size: 100%;
 }
 
-#pasos summary {
-	display: none;
-}
-
-#pasos details > div {
-	padding: 0 1em 1em;
-}
-
-#pasos details[open] > div {
-	border: 1px solid #BBB;
-	margin: 10px 0;
-}
-
 #DivFichero {
 	height: 0;
 }
@@ -69,11 +79,6 @@ select {
 	height: 1px;
 	opacity: .1;
 	background: transparent;
-}
-
-
-#ControlesDesplazamiento > .ContenedorControl {
-	margin: 10px 0;
 }
 
 .ContenedorControl {
@@ -88,7 +93,7 @@ select {
 }
 
 .ContenedorControl label {
-	flex-basis: 140px;
+	flex-basis: 170px;
 }
 
 .CampoCheckbox {
@@ -113,16 +118,6 @@ select {
 	margin: 2em 0 1em;
 }
 
-.centrado input {
-	padding: .3em 2.3em;
-}
-
-.Siguiente {
-	margin-top: 1em;
-	display: flex;
-	justify-content: space-between;
-}
-
 #AyudaOcultarNumeroSoporte,
 #AyudaOcultarParcialmente {
 	font-size: 90%;
@@ -139,7 +134,6 @@ canvas {
 }
 
 #Previsualizacion {
-	display: none;
 	aspect-ratio: 1000 / 625;
 	position: relative;
 	margin-bottom: 10px;
@@ -155,13 +149,33 @@ canvas {
 	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .16), 0 2px 10px 0 rgba(0, 0, 0, .12);
 }
 
+/* preguntas y respuestas en forma de acordeón de tarjetas */
 #FAQ summary {
 	cursor: pointer;
+	font-weight: bold;
+	padding: 12px 14px;
+	border-radius: 10px;
+	transition: background-color .2s;
+}
+
+#FAQ summary:hover {
+	background-color: var(--colorFondoSuave);
 }
 
 #FAQ details {
-	margin: 0 1px;
-	padding: .5em 0 .5em .5em;
+	background-color: var(--colorFondoTarjeta);
+	border: 1px solid var(--colorBorde);
+	border-radius: 10px;
+	margin: 0 0 10px;
+	padding: 0;
+}
+
+#FAQ details[open] {
+	border-color: var(--colorFondoBotonPrincipal);
+}
+
+#FAQ details[open] summary {
+	border-radius: 10px 10px 0 0;
 }
 
 details ol {
@@ -173,7 +187,7 @@ details li {
 }
 
 #FAQ details:where(:focus, :focus-within) {
-	box-shadow: 1px 1px 2px 2px rgb(0 0 0 / 23%);
+	box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
 }
 
 #FAQ details[id]:hover summary::after {
@@ -183,6 +197,10 @@ details li {
 
 .respuesta {
 	padding: 0 1em;
+}
+
+#FAQ .respuesta {
+	padding: 0 14px 6px;
 }
 
 a.ancla {
@@ -202,71 +220,15 @@ details:hover a.ancla {
 }
 
 footer {
-	background-color: var(--colorPie);
-	border-top: 1px solid #666;
-	padding: .4em 0 .8em;
+	color: var(--colorAncla);
+	padding: 0 10px 1.2em;
 	text-align: center;
-	margin-top: 1em;
 	font-size: 80%;
 }
 
-.wizard-progress {
-	display: flex;
-	min-height: 60px;
+footer a {
+	color: inherit;
 }
-
-.node,
-.step-name {
-	cursor: pointer;
-}
-
-.step {
-	text-align: center;
-	position: relative;
-	flex: 1;
-}
-
-.step:not(:last-child):before {
-	content: '';
-	display: block;
-	position: absolute;
-	left: 50%;
-	top: 33px;
-	background-color: var(--baseColor);
-	height: 5px;
-	width: 100%;
-}
-
-.node {
-	border: 4px solid var(--baseColor);
-	background-color: var(--baseColor);
-	border-radius: 50%;
-	width: 14px;
-	aspect-ratio: 1;
-	position: absolute;
-	top: 24px;
-	left: 50%;
-	margin-left: -12px;
-}
-
-.step.complete:before {
-	background-color: var(--mainColor);
-}
-
-.complete .node {
-	border-color: var(--mainColor);
-	background-color: var(--mainColor);
-}
-
-.step.in-progress:before {
-	background-image: linear-gradient(to right, var(--mainColor) 0%, var(--baseColor) 100%);
-}
-
-.in-progress .node {
-	border-color: var(--mainColor);
-	background-color: var(--colorActivo);
-}
-
 
 .dragover {
 	position: relative;
@@ -301,15 +263,17 @@ footer {
 	padding: 0;
 	overflow: hidden;
 	border-width: 0;
-	border-radius: 2px;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+	border-radius: 8px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
 	color: var(--colorBoton);
 	background-color: var(--colorFondoBoton);
-	transition: background-color .3s;
+	transition: background-color .3s, transform .2s, box-shadow .2s;
 }
 
 .btn:hover, .btn:focus {
 	background-color: var(--colorFondoBotonHover);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, .35);
 }
 
 .btn > * {
@@ -362,66 +326,59 @@ footer {
 	background-color: rgba(49 132 253 / .5);
 }
 
-.atras svg {
-	margin-left: 0;
-	margin-right: 10px;
+/* la portada enlaza al editor con un botón; los .btn son botones y necesitan quitar el subrayado */
+a.btn {
+	text-decoration: none;
 }
 
-.Siguiente .btn span {
-	padding: 6px 12px;
+/* botón principal de la cabecera de la portada: blanco sobre el degradado azul */
+.BotonHero {
+	background-color: #FFF;
+	color: var(--colorFondoBotonPrincipal);
+	font-size: 115%;
+	font-weight: bold;
 }
 
-#cerrar {
-	position: absolute;
-	right: 5px;
-	top: 5px;
-	margin: 0;
-	padding: 4px;
-	line-height: 0;
-	border-radius: 50%;
-	background: #fff;
-	color: #333;
-	cursor: pointer;
-	transition: all .2s ease-out 0s;
-	transition-property: background-color, color;
-	z-index: 1;
-	display: none;
+.BotonHero:hover, .BotonHero:focus {
+	background-color: #EFF5FF;
 }
 
-#cerrar:hover {
-	color: #fff;
-	background: #666;
+.BotonHero:before {
+	background-color: rgb(13 110 253 / .25);
 }
 
-#cerrar svg {
-	stroke: currentColor;
-	width: 12px;
-	height: 12px;
-	stroke-width: 1.3px;
+.BotonHero span {
+	padding: 14px 36px;
 }
 
-.informacion {
-	transition: height 0.25s all 0.25s;
-	transition-behavior: allow-discrete; /* Note: be sure to write this after the shorthand */
-	overflow: hidden;
+/* comparativa antes/después de la portada */
+.Comparativa {
+	display: flex;
+	gap: 10px;
 }
 
-.Editando .informacion {
-	height: 0;
+.Comparativa figure {
+	flex: 1;
+	min-width: 0;
 	margin: 0;
 }
 
-.Editando main {
+.Comparativa figcaption {
+	font-weight: bold;
+	margin-bottom: .3em;
+}
+
+.Comparativa img {
+	width: 100%;
+	height: auto;
+	border-radius: 8px;
 	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .16), 0 2px 10px 0 rgba(0, 0, 0, .12);
 }
 
-.Editando #pasos {
-	position: relative;
-	padding-top: 40px;
-}
-
-.Editando #cerrar {
-	display: block;
+@media (max-width: 700px) {
+	.Comparativa {
+		flex-direction: column;
+	}
 }
 
 .IconoAccion {
@@ -441,95 +398,7 @@ footer {
 	fill: currentColor;
 }
 
-.ControlesSuperpuestos {
-	position: absolute;
-	top: 0;
-	background: rgba(0 0 0 /.5);
-	padding: 5px;
-	z-index: 1;
-}
-
-#ControlesPosicion {
-	left: 0;
-	display: none;
-	gap: 5px;
-}
-
-body.Editando:where(.EnPaso2, .EnPaso3) #Previsualizacion {
-	touch-action: none;
-}
-
-body.Editando:where(.EnPaso2, .EnPaso3) #ControlesPosicion {
-	display: flex;
-}
-
-.BloqueBotones {
-	display: flex;
-	gap: 3px;
-}
-
-#ControlesPantalla {
-	right: 0;
-}
-
-#Colapsar {
-	display: none;
-}
-
-.EnZoom #Colapsar {
-	display: block;
-}
-
-.EnZoom #Expandir {
-	display: none;
-}
-
-.EnZoom #Previsualizacion {
-	z-index: 1;
-	max-height: 100vh;
-	margin: 0 auto;
-}
-
-.EnZoom h1 {
-	display: none;
-}
-
-.EnZoom canvas {
-	width: 100%;
-}
-
-.EnZoom footer {
-	display: none;
-}
-
-.EnZoom main {
-	max-width: none;
-	padding: 0;
-	width: 100vw;
-}
-
-.EnZoom details {
-	display: none;
-}
-
-.EnZoom .wizard-progress {
-	display: none;
-}
-
-.EnZoom #pasos {
-	padding: 0;
-}
-
-.EnZoom #cerrar {
-	display: none;
-}
-
-body.EnZoom {
-	display: grid;
-	justify-content: center;
-}
-
-/* mostrar un indicador en los enlaces que abrir�n nueva ventana */
+/* mostrar un indicador en los enlaces que abrir�n nueva ventana */
 a[target='_blank'] {
 	position: relative;
 }
@@ -577,5 +446,200 @@ a[href^='#'] {
 		left: calc(50vw - 300px);
 		max-width: 600px;
 		margin: 0;
+	}
+}
+
+/* Edición en una sola vista: panel original con las 4 esquinas y panel con la copia protegida */
+#Vistas {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	margin: 10px 0;
+}
+
+#Vistas > div {
+	flex: 1;
+	min-width: 0;
+}
+
+.TituloVista {
+	font-weight: bold;
+	margin: .6em 0 .3em;
+}
+
+@media (max-width: 700px) {
+	#Vistas {
+		flex-direction: column;
+	}
+
+	#Vistas > div {
+		width: 100%;
+	}
+}
+
+#EditorEsquinas {
+	position: relative;
+	aspect-ratio: 1000 / 625;
+}
+
+#EditorEsquinas canvas {
+	display: block;
+	width: 100%;
+}
+
+#MarcoEsquinas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	touch-action: none;
+}
+
+#PoligonoEsquinas {
+	fill: rgb(13 110 253 / .15);
+	stroke: var(--colorFondoBotonPrincipal);
+	stroke-width: 3;
+}
+
+#PoligonoEsquinas.invalido {
+	fill: rgb(220 30 30 / .2);
+	stroke: #DC1E1E;
+}
+
+.esquina {
+	cursor: grab;
+	fill: rgb(13 110 253 / .7);
+	stroke: #FFF;
+	stroke-width: 3;
+}
+
+/* zona ampliada alrededor de cada esquina para poder arrastrarla bien con el dedo */
+.ZonaToque {
+	fill: transparent;
+	stroke: none;
+}
+
+/* lupa que amplía la zona de la esquina mientras se arrastra un punto */
+#EditorEsquinas #Lupa {
+	display: none;
+	position: absolute;
+	width: 30%;
+	border: 3px solid var(--colorFondoBotonPrincipal);
+	border-radius: 50%;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+	pointer-events: none;
+	background: #FFF;
+	z-index: 2;
+}
+
+/* botones de girar la imagen original 90º, debajo del editor para no tapar las esquinas */
+#ControlesOriginal {
+	display: flex;
+	gap: 6px;
+	justify-content: center;
+	margin-top: 8px;
+}
+
+/*
+   Estilos de la portada (index.html)
+*/
+
+/* cabecera a todo lo ancho con degradado y la llamada a la acción */
+.Hero {
+	background: linear-gradient(135deg, #0D6EFD, #083A8C);
+	color: #FFF;
+	padding: 40px 16px 28px;
+	text-align: center;
+}
+
+.Hero h1 {
+	font-size: clamp(1.7em, 5vw, 2.6em);
+	margin: 0 auto .4em;
+	max-width: 720px;
+	text-wrap: balance;
+}
+
+/* los enlaces del texto en blanco, pero sin pisar el color del botón */
+.Hero a:not(.btn) {
+	color: inherit;
+}
+
+.Hero .centrado {
+	margin: 1.6em 0 1.2em;
+}
+
+.Lema {
+	font-size: 1.1em;
+	margin: 0 auto;
+	max-width: 640px;
+	opacity: .95;
+	text-wrap: pretty;
+}
+
+.NotaPrivacidad {
+	font-size: .85em;
+	margin: 0;
+	opacity: .85;
+}
+
+/* sellos de confianza en forma de píldoras */
+.Sellos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: center;
+	list-style: none;
+	margin: 20px 0 4px;
+	padding: 0;
+}
+
+.Sellos li {
+	background-color: var(--colorFondoSuave);
+	border: 1px solid var(--colorBorde);
+	border-radius: 999px;
+	font-size: .85em;
+	padding: 6px 14px;
+}
+
+.TextoSeccion {
+	margin: 0 auto 1.4em;
+	max-width: 760px;
+	text-align: center;
+	text-wrap: pretty;
+}
+
+/* tarjetas de "Cómo funciona" */
+.Tarjetas {
+	display: grid;
+	gap: 14px;
+	grid-template-columns: repeat(3, 1fr);
+}
+
+.Tarjeta {
+	background-color: var(--colorFondoSuave);
+	border: 1px solid var(--colorBorde);
+	border-radius: 12px;
+	padding: 14px 16px 6px;
+}
+
+.Tarjeta h3 {
+	margin: .5em 0 .3em;
+}
+
+.Numero {
+	align-items: center;
+	background-color: var(--colorFondoBotonPrincipal);
+	border-radius: 50%;
+	color: #FFF;
+	display: inline-flex;
+	font-weight: bold;
+	height: 1.8em;
+	justify-content: center;
+	width: 1.8em;
+}
+
+@media (max-width: 700px) {
+	.Tarjetas {
+		grid-template-columns: 1fr;
 	}
 }

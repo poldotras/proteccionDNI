@@ -1,15 +1,92 @@
-﻿/**
-Código específico para la página de pruebas
+/**
+Código específico de la página de pruebas: descarga la estructura del editor
+desde editor.html para no duplicarla, carga sus scripts y añade la galería
+de DNIs de ejemplo. Necesita un servidor web, no funciona abriendo el fichero.
 */
 'use strict';
 
-const imgs = querySelector_Array('#Ejemplos img');
+// scripts del editor, en el mismo orden en que los carga editor.html
+const ScriptsEditor = [
+	'formatos.js',
+	'js/base.js',
+	'js/procesador.js',
+	'js/editorEsquinas.js',
+	'js/resultado.js',
+	'js/marcaAgua.js',
+	'js/guardar.js',
+	'js/app.js',
+];
 
-imgs.forEach(imagenDemo => {
-	imagenDemo.title = imagenDemo.alt;
-	imagenDemo.addEventListener('click', CambiarImagenTest);
-});
+fetch('editor.html')
+	.then(respuesta => respuesta.text())
+	.then(function (html) {
+		// quitar el noscript antes de parsear: DOMParser trabaja sin javascript, por lo que
+		// interpretaría su <style> interno y el CSP de la página rechaza los estilos inline
+		const doc = new DOMParser().parseFromString(html.replace(/<noscript>[\s\S]*?<\/noscript>/g, ''), 'text/html');
 
+		// inyectar la sección del editor y el bloque oculto con las respuestas de ayuda
+		const contenedor = document.getElementById('ContenedorEditor');
+		contenedor.appendChild(doc.getElementById('pasos'));
+		contenedor.appendChild(doc.querySelector('main > div.Oculto'));
+
+		// cargar los scripts del editor en orden, ahora que ya existen sus elementos
+		return ScriptsEditor.reduce((previo, src) => previo.then(() => CargarScript(src)), Promise.resolve());
+	})
+	.then(function () {
+		ActivarGaleria();
+		ActivarPanelEsquinas();
+	})
+	.catch(function (error) {
+		console.error(error);
+		alert('No se ha podido cargar el editor.\r\nLa página de pruebas necesita un servidor web, no funciona abriendo el fichero directamente.');
+	});
+
+/**
+Panel de depuración con las coordenadas de los 4 puntos, para poder comparar
+dónde ha colocado las esquinas la detección y dónde deberían estar.
+Se actualiza con cada redibujado del marco (detección, arrastre o giro).
+*/
+function ActivarPanelEsquinas() {
+	const panel = document.createElement('div');
+	panel.id = 'CoordenadasEsquinas';
+	document.getElementById('ZonaGuardar').before(panel);
+
+	const nombres = ['arriba-izquierda', 'arriba-derecha', 'abajo-derecha', 'abajo-izquierda'];
+	function MostrarCoordenadas() {
+		if (!esquinasDNI)
+			return;
+
+		const tamano = imagenOriginalBN ? ` (imagen de ${imagenOriginalBN.width}×${imagenOriginalBN.height})` : '';
+		panel.textContent = 'Esquinas' + tamano + ': ' + esquinasDNI
+			.map((p, i) => nombres[i] + ' ' + Math.round(p.x) + ',' + Math.round(p.y))
+			.join(' | ');
+	}
+
+	// envolver la función global que se llama en cada actualización del marco
+	const original = ActualizarMarcoEsquinas;
+	ActualizarMarcoEsquinas = function () {
+		original();
+		MostrarCoordenadas();
+	};
+}
+
+function CargarScript(src) {
+	return new Promise(function (resolve, reject) {
+		const script = document.createElement('script');
+		script.src = src;
+		script.onload = resolve;
+		script.onerror = () => reject('Error cargando ' + src);
+		document.body.appendChild(script);
+	});
+}
+
+function ActivarGaleria() {
+	document.querySelectorAll('#Ejemplos img')
+		.forEach(imagenDemo => {
+			imagenDemo.title = imagenDemo.alt;
+			imagenDemo.addEventListener('click', CambiarImagenTest);
+		});
+}
 
 function CambiarImagenTest(ev) {
 	const actual = document.querySelector('.Elegida');
@@ -21,48 +98,12 @@ function CambiarImagenTest(ev) {
 
 	nombreFichero = img.src;
 
-	ActivarModoEdicion();
-	ResetearControles();
-	Previsualizacion.style.display = 'block';
-
-	const src = img.src;
-	// si vemos que coincide con el nombre de un formato, seleccionarlo automáticamente
-	const re = /ejemplos\/(.*)\.webp/;
-	const match = re.exec(src);
+	// si el nombre coincide con el de un formato, seleccionarlo automáticamente
+	const match = /ejemplos\/(.*)\.webp/.exec(img.src);
 	if (match) {
-		ActualizarValorInput(Formato, match[1]);
+		Formato.value = match[1];
+		Formato.dispatchEvent(new Event('change'));
 	}
 
-	if (nombreFichero.startsWith('file:')) {
-		const canvasTmp = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
-
-		const ctxImagen = canvasTmp.getContext('2d');
-		ctxImagen.drawImage(img, 0, 0);
-
-		imagenDNI_BN = canvasTmp.transferToImageBitmap();
-
-		RedibujarDNI();
-		activarWizard(document.getElementById('step2'));
-	} else {
-		PrepararDNI(img)
-			.then(() => {
-				RedibujarDNI();
-				activarWizard(document.getElementById('step2'));
-			});
-	}
-
-	DibujarMascara();
-	DibujarMarcaAgua();
+	ComenzarEdicion(img);
 }
-
-/**
- * Returns an Array with the result of a querySelectorAll call (a NodeList)
- * @param {any} selector
- * @param {any} root
- * @returns
- */
-function querySelector_Array(selector, root) {
-	return [].slice.call((root || document).querySelectorAll(selector));
-}
-
-

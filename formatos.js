@@ -1,15 +1,19 @@
 ﻿// Conjunto con objetos que definen los datos para cada formato de DNI
 // .Mascaras: los rectángulos a ocultar con negro
 // .Watermarks: array de objetos que definen fuente, estilo y rectángulo a rellenar con el watermark elegido
+//   (con mayusculas: true el texto se escribe en mayúsculas, como la zona de lectura mecánica del DNI;
+//   angulo rota todo el texto los grados indicados, o al azar entre -90 y 90 con 'aleatorio')
 const FormatosDnis = {
 	'-': {
 		Nombre: ' ', // Sin máscara
 		Mascaras: [
 		],
 		Watermarks: [{
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni4-frontal': {
@@ -31,13 +35,11 @@ const FormatosDnis = {
 			{ x: 380, y: 380, w: 400, h: 35 }, // emision, validez
 		],
 		Watermarks: [{
-			fuente: '900 48px sans-serif',
-			estilo: 'rgb(0 0 0 / 100%)',
-			bb: { x: 10, y: 190, w: 360, h: 490 }
-		}, {
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni4-trasera': {
@@ -50,9 +52,11 @@ const FormatosDnis = {
 			{ x: 20, y: 395, w: 960, h: 130 }, // Inferior
 		],
 		Watermarks: [{
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni3-frontal': {
@@ -73,13 +77,11 @@ const FormatosDnis = {
 			{ x: 580, y: 445, w: 200, h: 35 }, // Validez
 		],
 		Watermarks: [{
-			fuente: '900 48px sans-serif',
-			estilo: 'rgb(0 0 0 / 100%)',
-			bb: { x: 10, y: 140, w: 350, h: 460 }
-		}, {
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni3-trasera': {
@@ -92,9 +94,11 @@ const FormatosDnis = {
 			{ x: 20, y: 410, w: 960, h: 130 }, // Inferior
 		],
 		Watermarks: [{
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni1-frontal': {
@@ -109,13 +113,11 @@ const FormatosDnis = {
 			{ x: 290, y: 400, w: 230, h: 35 }, // Validez
 		],
 		Watermarks: [{
-			fuente: '900 48px sans-serif',
-			estilo: 'rgb(0 0 0 / 100%)',
-			bb: { x: 700, y: 340, w: 290, h: 310 }
-		}, {
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 	'dni1-trasera': {
@@ -127,9 +129,11 @@ const FormatosDnis = {
 			{ x: 20, y: 410, w: 960, h: 120 }, // Inferior
 		],
 		Watermarks: [{
-			fuente: '12px serif',
-			estilo: 'rgb(0 0 0 / 30%)',
-			bb: { x: 10, y: 30, w: 980, h: 605 }
+			fuente: "600 16px 'Courier New', monospace",
+			estilo: 'rgb(0 0 0 / 40%)',
+			mayusculas: true,
+			angulo: 'aleatorio',
+			bb: { x: 0, y: 0, w: 1000, h: 625 }
 		}]
 	},
 };

@@ -12,6 +12,7 @@ const ScriptsEditor = [
 	'js/procesador.js',
 	'js/editorEsquinas.js',
 	'js/resultado.js',
+	'js/marcaAgua.js',
 	'js/guardar.js',
 	'js/app.js',
 ];

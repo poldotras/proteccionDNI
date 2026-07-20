@@ -1,14 +1,24 @@
 /**
-Marca de agua de la copia protegida: el texto de la finalidad escrito en ondas,
-con rotación aleatoria y el efecto de lupas que deforma el texto, visible
-también sobre los campos censurados.
-Debe cargarse después de resultado.js, para que su canvas quede por encima
-del de las máscaras.
-*/
-'use strict';
+ * Marca de agua de la copia protegida: el texto de la finalidad escrito en ondas,
+ * con rotación aleatoria y el efecto de lupas que deforma el texto, visible
+ * también sobre los campos censurados.
+ * Se importa después de resultado.ts para que su canvas quede por encima
+ * del de las máscaras.
+ */
+import { canvas, Previsualizacion, Formato, Watermark } from './dom';
+import { FormatosDnis } from './formatos';
+import { BloquesCensurados } from './resultado';
+
+/** Un punto de lupa que amplía la marca de agua a su alrededor */
+interface LupaMarca {
+	x: number;
+	y: number;
+	radio: number;
+	zoom: number;
+}
 
 // canvas para la superposición de texto/marca de agua
-const canvasWatermark = document.createElement('canvas');
+export const canvasWatermark = document.createElement('canvas');
 canvasWatermark.width = canvas.width;
 canvasWatermark.height = canvas.height;
 Previsualizacion.appendChild(canvasWatermark);
@@ -18,35 +28,35 @@ const canvasCapaMarcas = document.createElement('canvas');
 canvasCapaMarcas.width = canvas.width;
 canvasCapaMarcas.height = canvas.height;
 
-// Objeto para mantener caché de las métricas del texto sin recalcular
-const CacheMetricas = {};
+// caché de las anchuras de cada letra por fuente, para no medir de más
+const CacheMetricas: Record<string, Record<string, number>> = {};
 
 // Rotación de las marcas con angulo 'aleatorio' (al azar entre -90º y 90º) y
 // puntos de "lupa" que amplían la marca de agua alrededor de posiciones al azar
-let AnguloAleatorio;
-let Lupas;
+let AnguloAleatorio = 0;
+let Lupas: LupaMarca[] = [];
 SortearMarcas();
 
 /**
-Sortear de nuevo el ángulo y las lupas de la marca de agua; se hace al cargar
-cada foto y al cambiar el texto, para que las copias no sean predecibles
-*/
-function SortearMarcas() {
+ * Sortear de nuevo el ángulo y las lupas de la marca de agua; se hace al cargar
+ * cada foto y al cambiar el texto, para que las copias no sean predecibles
+ */
+export function SortearMarcas(): void {
 	AnguloAleatorio = Math.round(Math.random() * 180) - 90;
 	Lupas = GenerarLupas();
 }
 
 /**
-Sortear entre 5 y 7 lupas con posición, potencia de zoom y radio al azar.
-Deben quedar separadas entre sí al menos el 90% de la suma de sus radios;
-si una posición no cumple, se sortea otra (con un límite de intentos por si
-el azar no deja sitio para todas)
-*/
-function GenerarLupas() {
+ * Sortear entre 5 y 7 lupas con posición, potencia de zoom y radio al azar.
+ * Deben quedar separadas entre sí al menos el 90% de la suma de sus radios;
+ * si una posición no cumple, se sortea otra (con un límite de intentos por si
+ * el azar no deja sitio para todas)
+ */
+function GenerarLupas(): LupaMarca[] {
 	const cantidad = 5 + Math.floor(Math.random() * 3);
-	const lupas = [];
+	const lupas: LupaMarca[] = [];
 	for (let intentos = 0; lupas.length < cantidad && intentos < 200; intentos++) {
-		const lupa = {
+		const lupa: LupaMarca = {
 			x: Math.random() * canvas.width,
 			y: Math.random() * canvas.height,
 			radio: 100 + Math.random() * 100,
@@ -59,13 +69,13 @@ function GenerarLupas() {
 }
 
 /**
-Sobre escribir texto en las zonas que se definan para el formato elegido.
-La marca debe verse también por encima de los campos censurados en negro,
-así que se repite en blanco recortada a esos rectángulos, con la misma
-onda, ángulo y lupas para que las líneas tengan continuidad
-*/
-function DibujarMarcaAgua() {
-	const ctx = canvasWatermark.getContext('2d');
+ * Sobre escribir texto en las zonas que se definan para el formato elegido.
+ * La marca debe verse también por encima de los campos censurados en negro,
+ * así que se repite en blanco recortada a esos rectángulos, con la misma
+ * onda, ángulo y lupas para que las líneas tengan continuidad
+ */
+export function DibujarMarcaAgua(): void {
+	const ctx = canvasWatermark.getContext('2d')!;
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	const texto = Watermark.value;
 	// Si ha borrado todo el texto, no escribir nada
@@ -89,11 +99,9 @@ function DibujarMarcaAgua() {
 	ctx.restore();
 }
 
-/**
-Dibujar una pasada del texto en la capa auxiliar y devolverla ya deformada por las lupas
-*/
-function CapaMarcas(texto, estilo) {
-	const ctx = canvasCapaMarcas.getContext('2d');
+/** Dibujar una pasada del texto en la capa auxiliar y devolverla ya deformada por las lupas */
+function CapaMarcas(texto: string, estilo?: string): HTMLCanvasElement {
+	const ctx = canvasCapaMarcas.getContext('2d')!;
 	ctx.clearRect(0, 0, canvasCapaMarcas.width, canvasCapaMarcas.height);
 	DibujarMarcas(ctx, texto, estilo);
 	AplicarLupas(canvasCapaMarcas);
@@ -101,12 +109,12 @@ function CapaMarcas(texto, estilo) {
 }
 
 /**
-Deformar la capa con el efecto de cada lupa: cada píxel dentro del radio toma
-su color de una posición más cercana al centro (mapeo inverso), con la
-ampliación máxima en el centro decayendo en gradiente hasta ninguna en el borde
-*/
-function AplicarLupas(capa) {
-	const ctx = capa.getContext('2d');
+ * Deformar la capa con el efecto de cada lupa: cada píxel dentro del radio toma
+ * su color de una posición más cercana al centro (mapeo inverso), con la
+ * ampliación máxima en el centro decayendo en gradiente hasta ninguna en el borde
+ */
+function AplicarLupas(capa: HTMLCanvasElement): void {
+	const ctx = capa.getContext('2d')!;
 	Lupas.forEach(function (lupa) {
 		const x0 = Math.max(0, Math.floor(lupa.x - lupa.radio));
 		const y0 = Math.max(0, Math.floor(lupa.y - lupa.radio));
@@ -147,11 +155,11 @@ function AplicarLupas(capa) {
 }
 
 /**
-Copiar en dst[i] el color de la posición (sx, sy) con interpolación bilineal.
-Se interpola con el color premultiplicado por el alfa para que los píxeles
-transparentes no arrastren su color a los bordes de las letras
-*/
-function MuestraBilineal(src, w, h, sx, sy, dst, i) {
+ * Copiar en dst[i] el color de la posición (sx, sy) con interpolación bilineal.
+ * Se interpola con el color premultiplicado por el alfa para que los píxeles
+ * transparentes no arrastren su color a los bordes de las letras
+ */
+function MuestraBilineal(src: Uint8ClampedArray, w: number, h: number, sx: number, sy: number, dst: Uint8ClampedArray, i: number): void {
 	const xBase = Math.min(Math.max(Math.floor(sx), 0), w - 1);
 	const yBase = Math.min(Math.max(Math.floor(sy), 0), h - 1);
 	const xSig = Math.min(xBase + 1, w - 1);
@@ -160,7 +168,7 @@ function MuestraBilineal(src, w, h, sx, sy, dst, i) {
 	const fy = Math.min(Math.max(sy - yBase, 0), 1);
 
 	let r = 0, g = 0, b = 0, a = 0;
-	function Acumular(x, y, peso) {
+	function Acumular(x: number, y: number, peso: number): void {
 		if (!peso)
 			return;
 		const j = (y * w + x) * 4;
@@ -184,10 +192,10 @@ function MuestraBilineal(src, w, h, sx, sy, dst, i) {
 }
 
 /**
-Escribir las marcas de agua del formato actual, con un estilo opcional que
-sustituye al del formato
-*/
-function DibujarMarcas(ctx, texto, estilo) {
+ * Escribir las marcas de agua del formato actual, con un estilo opcional que
+ * sustituye al del formato
+ */
+function DibujarMarcas(ctx: CanvasRenderingContext2D, texto: string, estilo?: string): void {
 	FormatosDnis[Formato.value].Watermarks.forEach(marca => {
 		const textoMarca = marca.mayusculas ? texto.toUpperCase() : texto;
 		const angulo = marca.angulo == 'aleatorio' ? AnguloAleatorio : marca.angulo;
@@ -196,11 +204,11 @@ function DibujarMarcas(ctx, texto, estilo) {
 }
 
 /**
-Rellenar la finalidad con la fecha actual y el parámetro "para" si viene en la URL;
-sin él, el campo queda vacío mostrando el ejemplo del placeholder
-*/
-function AsignarWatermarkPorDefecto(input) {
-	const sp = new URLSearchParams(location.search)
+ * Rellenar la finalidad con la fecha actual y el parámetro "para" si viene en la URL;
+ * sin él, el campo queda vacío mostrando el ejemplo del placeholder
+ */
+export function AsignarWatermarkPorDefecto(input: HTMLInputElement): void {
+	const sp = new URLSearchParams(location.search);
 	if (!sp.has('para'))
 		return;
 
@@ -208,10 +216,8 @@ function AsignarWatermarkPorDefecto(input) {
 	input.value = `Copia ${hoy.toISOString().substring(0, 10)} para ${sp.get('para')}`;
 }
 
-/**
-Anchura de cada letra del texto con la fuente indicada, usando la caché global
-*/
-function MetricasLetras(ctx, fuente, letras) {
+/** Anchura de cada letra del texto con la fuente indicada, usando la caché global */
+function MetricasLetras(ctx: CanvasRenderingContext2D, fuente: string, letras: string[]): Record<string, number> {
 	let Metricas = CacheMetricas[fuente];
 	if (!Metricas) {
 		Metricas = {};
@@ -227,12 +233,12 @@ function MetricasLetras(ctx, fuente, letras) {
 }
 
 /**
-Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar.
-Cada letra se desplaza verticalmente siguiendo una onda, lo que dificulta
-borrar la marca de agua de forma automática y le da un aspecto distintivo.
-Si se indica un ángulo (en grados), todo el texto se dibuja rotado sin salirse de la zona
-*/
-function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight, angulo) {
+ * Escribir un texto en la zona delimitada haciendo wrap letra a letra y repitiendo hasta llenar.
+ * Cada letra se desplaza verticalmente siguiendo una onda, lo que dificulta
+ * borrar la marca de agua de forma automática y le da un aspecto distintivo.
+ * Si se indica un ángulo (en grados), todo el texto se dibuja rotado sin salirse de la zona
+ */
+function RellenarTexto(texto: string, ctx: CanvasRenderingContext2D, fuente: string, estilo: string, x: number, y: number, maxWidth: number, maxHeight: number, angulo: number): void {
 	if (angulo) {
 		ctx.save();
 		ctx.beginPath();
@@ -244,7 +250,7 @@ function RellenarTexto(texto, ctx, fuente, estilo, x, y, maxWidth, maxHeight, an
 		ctx.translate(x + maxWidth / 2, y + maxHeight / 2);
 		ctx.rotate(angulo * Math.PI / 180);
 		const lado = Math.hypot(maxWidth, maxHeight);
-		RellenarTexto(texto, ctx, fuente, estilo, -lado / 2, -lado / 2, lado, lado);
+		RellenarTexto(texto, ctx, fuente, estilo, -lado / 2, -lado / 2, lado, lado, 0);
 
 		ctx.restore();
 		return;

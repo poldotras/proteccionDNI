@@ -4,7 +4,6 @@
 	<meta charset="UTF-8">
 	<title>Protege mi DNI</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<link rel="stylesheet" type="text/css" href="estilos.css">
 	<link href="favicon.ico" rel="icon">
 	<meta name="keywords" content="DNI, seguridad, compartir DNI, protección DNI">
 	<meta name="description" content="Crea fácilmente una copia del DNI que oculta los datos privados y muestra el motivo por el que lo estás compartiendo">
@@ -26,7 +25,7 @@
 
 	<link rel="manifest" href="manifest.webmanifest">
 	<!-- Si se usa el fichero en local, hay que quitar esta linea, esto debería ser un HTTP Header pero GitHub pages no lo soportan https://github.com/orgs/community/discussions/54257 -->
-	<meta id="MetaCSP" http-equiv="Content-Security-Policy" content="script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' blob: data:; media-src 'none'; font-src 'self'; connect-src data:; frame-src 'none'; object-src 'none'; form-action 'none'; " />
+	<meta id="MetaCSP" http-equiv="Content-Security-Policy" content="script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' blob: data:; media-src 'none'; font-src 'self'; connect-src data:; worker-src 'self'; frame-src 'none'; object-src 'none'; form-action 'none'; " />
 	<!--<meta http-equiv="X-Frame-Options" content="DENY" />-->
 	<meta http-equiv="X-Content-Type-Options" content="nosniff" />
 </head>
@@ -56,11 +55,11 @@
 			<div class="Comparativa">
 				<figure>
 					<figcaption>📷 Antes: la foto del DNI</figcaption>
-					<img src="ejemplos/ejemplo-original.webp" alt="Foto de un DNI de ejemplo sobre una mesa" width="1200" height="900">
+					<img src="/ejemplos/ejemplo-original.webp" alt="Foto de un DNI de ejemplo sobre una mesa" width="1200" height="900">
 				</figure>
 				<figure>
 					<figcaption>✅ Después: la copia protegida</figcaption>
-					<img src="ejemplos/ejemplo-protegido.webp" alt="Ejemplo de DNI protegido" width="1000" height="625">
+					<img src="/ejemplos/ejemplo-protegido.webp" alt="Ejemplo de DNI protegido" width="1000" height="625">
 				</figure>
 			</div>
 		</section>
@@ -237,6 +236,6 @@
 	</main>
 
 	<footer>Esta página no recoge ningún dato. No se envían datos a ninguna parte. No se usan cookies ni servicios de terceros. <a href="https://github.com/AlfonsoML/proteccionDNI/" target="_blank">Código fuente</a></footer>
-	<script type="text/javascript" src="js/info.js"></script>
+	<script type="module" src="/src/info.ts"></script>
 </body>
 </html>

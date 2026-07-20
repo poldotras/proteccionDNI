@@ -6,7 +6,7 @@ import { canvasOriginal, MarcoEsquinas, PoligonoEsquinas, Lupa } from './dom';
 import { estado } from './estado';
 import { enviarAlWorker } from './procesador';
 import { RedibujarDNI } from './resultado';
-import type { Punto, Esquinas, Rectangulo, RespuestaEnderezar, RespuestaGirar, RespuestaDetectar } from './tipos';
+import type { Punto, Esquinas, Rectangulo, RespuestaEnderezar, RespuestaGirar, RespuestaDetectar } from '../tipos';
 
 // escala y desplazamiento con los que se muestra la imagen original dentro del editor
 let transformacionEditor = { escala: 1, x: 0, y: 0 };

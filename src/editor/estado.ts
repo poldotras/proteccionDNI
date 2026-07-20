@@ -3,7 +3,7 @@
  * Al usar módulos ES no se puede reasignar un `export let` desde otro fichero,
  * así que el estado vive en un único objeto mutable que todos importan.
  */
-import type { Esquinas, Rectangulo } from './tipos';
+import type { Esquinas, Rectangulo } from '../tipos';
 
 interface Estado {
 	/** Imagen del DNI a escala 1:1 en blanco y negro que se muestra como resultado

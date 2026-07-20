@@ -3,14 +3,9 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Protege mi DNI</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<link href="favicon.ico" rel="icon">
 	<meta name="keywords" content="DNI, seguridad, compartir DNI, protección DNI">
 	<meta name="description" content="Crea fácilmente una copia del DNI que oculta los datos privados y muestra el motivo por el que lo estás compartiendo">
 	<meta name="robots" content="index, follow">
-	<meta name="mobile-web-app-capable" content="yes">
-	<meta name="apple-mobile-web-app-capable" content="yes">
-	<meta name="application-name" content="Protege mi DNI">
 	<meta property="og:locale" content="es_ES">
 	<meta property="og:type" content="website">
 	<meta property="og:url" content="https://protegemidni.es">
@@ -21,13 +16,8 @@
 	<meta property="og:image:width" content="1000">
 	<meta property="og:image:height" content="625">
 	<meta property="og:image:alt" content="Ejemplo de DNI protegido">
-	<link rel="canonical" href="https://protegemidni.es" />
-
-	<link rel="manifest" href="manifest.webmanifest">
-	<!-- Si se usa el fichero en local, hay que quitar esta linea, esto debería ser un HTTP Header pero GitHub pages no lo soportan https://github.com/orgs/community/discussions/54257 -->
-	<meta id="MetaCSP" http-equiv="Content-Security-Policy" content="script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' blob: data:; media-src 'none'; font-src 'self'; connect-src data:; worker-src 'self'; frame-src 'none'; object-src 'none'; form-action 'none'; " />
-	<!--<meta http-equiv="X-Frame-Options" content="DENY" />-->
-	<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+	<link rel="canonical" href="https://protegemidni.es">
+	{{> cabecera }}
 </head>
 <body>
 	<header class="Hero">
@@ -236,6 +226,6 @@
 	</main>
 
 	<footer>Esta página no recoge ningún dato. No se envían datos a ninguna parte. No se usan cookies ni servicios de terceros. <a href="https://github.com/AlfonsoML/proteccionDNI/" target="_blank">Código fuente</a></footer>
-	<script type="module" src="/src/info.ts"></script>
+	<script type="module" src="/src/portada.ts"></script>
 </body>
 </html>

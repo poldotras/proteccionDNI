@@ -2,7 +2,7 @@
  * Flujo principal del editor: carga de la foto, preparación del DNI y el
  * cableado de todos los eventos de la página. Es el punto de entrada del editor.
  */
-import './estilos.css';
+import '../estilos.css';
 import { Formato, SelectorFichero, Watermark, EnmascararDni, DivMascaraDni, Validez, DivValidez, botonGuardar } from './dom';
 import { estado } from './estado';
 import { enviarAlWorker } from './procesador';
@@ -15,12 +15,12 @@ import {
 	configurarGiro,
 	configurarDeteccionManual,
 	configurarEditorEsquinas,
-} from './editorEsquinas';
+} from './esquinas';
 import { RedibujarDNI, DibujarMascara } from './resultado';
 import { DibujarMarcaAgua, AsignarWatermarkPorDefecto, SortearMarcas } from './marcaAgua';
 import { GrabarImagen, configurarCompartir } from './guardar';
-import { FormatosDnis } from './formatos';
-import type { RespuestaProcesar } from './tipos';
+import { FormatosDnis } from '../formatos';
+import type { RespuestaProcesar } from '../tipos';
 
 window.onerror = (mensaje, _fuente, linea, columna, error) => {
 	console.log(`Error message: ${mensaje}`, `lineno: ${linea}`, `colno: ${columna}`);

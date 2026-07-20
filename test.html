@@ -1,16 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
 	<meta charset="UTF-8">
 	<title>Página de pruebas</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<link href="favicon.ico" rel="icon">
 	<meta name="robots" content="noindex, nofollow">
-
-	<!-- Debería ser una cabecera HTTP, pero GitHub Pages no las soporta. -->
-	<!-- A diferencia del editor, esta página necesita connect-src 'self' para descargar la estructura de editor.html -->
-	<meta id="MetaCSP" http-equiv="Content-Security-Policy" content="script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' blob: data:; media-src 'none'; font-src 'self'; connect-src 'self' data:; worker-src 'self'; frame-src 'none'; object-src 'none'; form-action 'none'; " />
-	<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+	{{> cabecera }}
 </head>
 <body>
 	<main>
@@ -26,23 +20,10 @@
 				<img src="/ejemplos/dni1-trasera.webp" alt="DNI 1 trasera">
 			</div>
 		</section>
-		<noscript>
-			<p>
-				Esta página necesita que actives el Javascript para poder ejecutarla. Todo el proceso se hace en tu navegador y es imprescindible el uso de javascript.
-			</p>
-			<style type="text/css">
-				noscript p {
-					margin: 2em;
-					font-weight: bold;
-					text-align: center;
-				}
-			</style>
-		</noscript>
-		<!-- aquí se inyecta la estructura del editor descargada de editor.html -->
-		<div id="ContenedorEditor"></div>
+		{{> editor }}
 	</main>
 
 	<footer>Página de pruebas. <a href="index.html">Ir a la principal</a></footer>
-	<script type="module" src="/src/test.ts"></script>
+	<script type="module" src="/src/editor/pruebas.ts"></script>
 </body>
 </html>

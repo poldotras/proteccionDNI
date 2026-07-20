@@ -4,8 +4,8 @@
  */
 import { canvas, Previsualizacion, Formato, Validez, EnmascararDni } from './dom';
 import { estado } from './estado';
-import { FormatosDnis } from './formatos';
-import type { Rectangulo } from './tipos';
+import { FormatosDnis } from '../formatos';
+import type { Rectangulo } from '../tipos';
 
 // canvas con las máscaras que tapan datos
 export const canvasMascara = document.createElement('canvas');

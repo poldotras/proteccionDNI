@@ -6,7 +6,7 @@
  * del de las máscaras.
  */
 import { canvas, Previsualizacion, Formato, Watermark } from './dom';
-import { FormatosDnis } from './formatos';
+import { FormatosDnis } from '../formatos';
 import { BloquesCensurados } from './resultado';
 
 /** Un punto de lupa que amplía la marca de agua a su alrededor */

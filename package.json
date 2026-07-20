@@ -4,14 +4,19 @@
   "description": "Crea una copia protegida de tu DNI en el navegador: en blanco y negro, con los datos privados tapados y una marca de agua con la finalidad",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.worker.json",
+    "build": "pnpm typecheck && vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vite-plugin-handlebars": "^2.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   }
 }

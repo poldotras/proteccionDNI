@@ -3,9 +3,9 @@
  * detección de esquinas, enderezado y giros).
  * Cada petición lleva un id para resolver su promesa cuando el worker responde.
  */
-import type { PeticionWorker } from './tipos';
+import type { PeticionWorker } from '../tipos';
 
-const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+const worker = new Worker(new URL('../worker/worker.ts', import.meta.url), { type: 'module' });
 
 let idMensaje = 0;
 const respuestas = new Map<number, (datos: unknown) => void>();

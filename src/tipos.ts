@@ -43,7 +43,7 @@ export interface FormatoDni {
 //
 
 export type PeticionWorker =
-	| { tipo: 'procesar'; bitmap: ImageBitmap }
+	| { tipo: 'procesar'; bitmap: ImageBitmap; generacion: number }
 	| { tipo: 'detectar' }
 	| { tipo: 'enderezar'; esquinas: Esquinas }
 	| { tipo: 'girar'; giro: number };

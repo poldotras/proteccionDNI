@@ -16,17 +16,21 @@ let imagenGris: ImageData | null = null;
 // La misma imagen en color, para mostrarla en el editor de esquinas
 let imagenColor: ImageData | null = null;
 
+// Generación de la foto guardada. Si dos cargas seguidas se procesan fuera de orden,
+// una 'procesar' de generación menor no debe pisar la foto más reciente.
+let generacionImagen = 0;
+
 /**
  * Procesar una foto nueva: girar si está en vertical, pasar a blanco y negro
  * y detectar las esquinas del DNI. No endereza; eso se pide en un mensaje aparte.
  * Devuelve el bitmap en blanco y negro y otro en color para el editor de esquinas.
  */
-function ProcesarImagenNueva(datos: { id: number; bitmap: ImageBitmap }): void {
+function ProcesarImagenNueva(datos: { id: number; bitmap: ImageBitmap; generacion: number }): void {
 	const canvas = ReducirAnchura(PonerHorizontal(datos.bitmap));
 	const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 
-	imagenGris = null;
-	imagenColor = null;
+	// solo esta foto es "la actual" si su generación no es anterior a la guardada
+	const esMasReciente = datos.generacion >= generacionImagen;
 	try {
 		const imgPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
 		// copia en color (para el editor de esquinas) antes de convertir a blanco y negro;
@@ -46,13 +50,21 @@ function ProcesarImagenNueva(datos: { id: number; bitmap: ImageBitmap }): void {
 		ctx.putImageData(AclararNegros(salida), 0, 0);
 		const bitmap = canvas.transferToImageBitmap();
 
-		// se guardan las imágenes de trabajo solo tras completar todo sin error
-		imagenColor = color;
-		imagenGris = imgPixels;
+		// las imágenes de trabajo se guardan solo si esta es la foto más reciente
+		if (esMasReciente) {
+			generacionImagen = datos.generacion;
+			imagenColor = color;
+			imagenGris = imgPixels;
+		}
 		postMessage({ id: datos.id, bitmap, bitmapColor, esquinas, tarjeta, recortada });
 	} catch {
 		// si algo falla (getImageData con un canvas contaminado, falta de memoria...)
 		// se descarta el estado a medias y se devuelve la imagen sin procesar
+		if (esMasReciente) {
+			generacionImagen = datos.generacion;
+			imagenColor = null;
+			imagenGris = null;
+		}
 		postMessage({ id: datos.id, bitmap: canvas.transferToImageBitmap(), bitmapColor: null, esquinas: null, tarjeta: null, recortada: false });
 	}
 }

@@ -101,8 +101,10 @@ function CrearBitmap(img: HTMLImageElement): Promise<ImageBitmap> {
 function PrepararDNI(img: HTMLImageElement): Promise<void> {
 	const generacion = estado.generacion;
 	return CrearBitmap(img)
-		// el bitmap se transfiere al worker (no lo necesitamos ya en el hilo principal)
-		.then(bitmap => enviarAlWorker<RespuestaProcesar>({ tipo: 'procesar', bitmap }, [bitmap]))
+		// el bitmap se transfiere al worker (no lo necesitamos ya en el hilo principal);
+		// la generación permite al worker quedarse con la foto más reciente aunque dos
+		// cargas seguidas se procesen fuera de orden
+		.then(bitmap => enviarAlWorker<RespuestaProcesar>({ tipo: 'procesar', bitmap, generacion }, [bitmap]))
 		.then(function (respuesta) {
 			// descartar la respuesta si entretanto se ha cargado otra foto
 			if (generacion !== estado.generacion)

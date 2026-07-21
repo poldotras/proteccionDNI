@@ -25,7 +25,7 @@ pnpm preview    # sirve el build de producción para revisarlo
 Las páginas (`index.html`, `editor.html`, `test.html`) están en la raíz. El marcado común
 (la cabecera y el editor) se incluye desde `src/partials/` en tiempo de build con
 [handlebars](https://github.com/alexlafroscia/vite-plugin-handlebars), así que no se duplica
-ni se inyecta por JS. Los estáticos (favicon, iconos, ejemplos, manifest, CNAME) están en
+ni se inyecta por JS. Los estáticos (favicon, iconos, ejemplos, manifest) están en
 `public/`.
 
 - `src/tipos.ts`: tipos compartidos entre la interfaz y el worker (puntos, esquinas, mensajes)

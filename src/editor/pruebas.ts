@@ -3,7 +3,7 @@
  * incluye en la plantilla, no se inyecta por JS) y añade la galería de DNIs de
  * ejemplo y un panel con las coordenadas de los 4 puntos para depurar la detección.
  */
-import '../test.css';
+import './pruebas.css';
 import { ComenzarEdicion } from './editor';
 import { observarMarco } from './esquinas';
 import { Formato } from './dom';

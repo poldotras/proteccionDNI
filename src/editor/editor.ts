@@ -22,15 +22,20 @@ import { GrabarImagen, configurarCompartir } from './guardar';
 import { FormatosDnis } from '../formatos';
 import type { RespuestaProcesar } from '../tipos';
 
-window.onerror = (mensaje, _fuente, linea, columna, error) => {
-	console.log(`Error message: ${mensaje}`, `lineno: ${linea}`, `colno: ${columna}`);
-	console.error(error);
+window.onerror = (mensaje, _fuente, _linea, _columna, error) => {
+	console.error('Error inesperado:', mensaje, error);
 	alert(`Error inesperado: ${mensaje}`);
 };
 
 //
 // Carga de la foto
 //
+
+/** Redibujar las capas de censura y de marca de agua sobre el resultado */
+function RedibujarCapas(): void {
+	DibujarMascara();
+	DibujarMarcaAgua();
+}
 
 /**
  * Comenzar la edición con una imagen ya cargada: mostrar la zona de edición,
@@ -49,8 +54,7 @@ export function ComenzarEdicion(img: HTMLImageElement): void {
 			console.error(error);
 		});
 
-	DibujarMascara();
-	DibujarMarcaAgua();
+	RedibujarCapas();
 }
 
 /** Cargar el fichero elegido como imagen y comenzar el proceso */
@@ -61,7 +65,7 @@ function MostrarImagen(file: File): void {
 		ComenzarEdicion(img);
 	};
 	img.onerror = function (e) {
-		console.log(e);
+		console.error('No se ha podido cargar la imagen', e);
 		alert('Por favor, escoge una imagen válida');
 	};
 	img.src = URL.createObjectURL(file);
@@ -176,13 +180,13 @@ Formato.innerHTML = Object.entries(FormatosDnis)
 	.map(([clave, formato]) => `<option value='${clave}'>${formato.Nombre}</option>`)
 	.join('');
 
-SelectorFichero.addEventListener('change', function (e) {
-	const fichero = (e.target as HTMLInputElement).files?.[0];
+SelectorFichero.addEventListener('change', function () {
+	const fichero = SelectorFichero.files?.[0];
 	if (fichero) {
 		MostrarImagen(fichero);
-		estado.nombreFichero = (e.target as HTMLInputElement).value;
+		estado.nombreFichero = SelectorFichero.value;
 		// borramos por si quieren volver a elegir la misma
-		(e.target as HTMLInputElement).value = '';
+		SelectorFichero.value = '';
 	}
 });
 
@@ -190,19 +194,16 @@ SelectorFichero.addEventListener('change', function (e) {
 document.getElementById('ZonaElegir')!
 	.addEventListener('click', () => SelectorFichero.click());
 
-[Formato, EnmascararDni, Validez].forEach(function (control) {
-	control.addEventListener('change', function (e) {
-		if (e.target == Formato) {
-			// ajustar visibilidad de los checkbox dependiendo de las opciones del formato elegido
-			const formato = FormatosDnis[Formato.value];
-			DivMascaraDni.classList.toggle('Oculto', !formato.MascarasDni);
-			DivValidez.classList.toggle('Oculto', !formato.DatosValidez);
-		}
-
-		DibujarMascara();
-		DibujarMarcaAgua();
-	});
+Formato.addEventListener('change', function () {
+	// ajustar la visibilidad de los checkbox según las opciones del formato elegido
+	const formato = FormatosDnis[Formato.value];
+	DivMascaraDni.classList.toggle('Oculto', !formato.MascarasDni);
+	DivValidez.classList.toggle('Oculto', !formato.DatosValidez);
+	RedibujarCapas();
 });
+
+[EnmascararDni, Validez].forEach(control =>
+	control.addEventListener('change', RedibujarCapas));
 
 Watermark.addEventListener('input', function () {
 	SortearMarcas();

@@ -50,7 +50,7 @@ ni se inyecta por JS. Los estáticos (favicon, iconos, ejemplos, manifest) está
   - `hough.ts`: detección por rectas dominantes (Hough por gradiente)
   - `refinado.ts`: refinado de esquinas por barrido de rectas y validación
   - `enderezado.ts`: corrección de perspectiva (homografía)
-- `src/estilos.css`, `src/test.css`: los estilos
+- `src/estilos.css`: los estilos comunes (la página de pruebas añade `src/editor/pruebas.css`)
 
 ## Despliegue
 

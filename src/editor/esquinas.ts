@@ -79,7 +79,7 @@ function EsquinaAEditor(punto: Punto): Punto {
 }
 
 /** Actualizar el polígono y los puntos arrastrables con la posición actual de las esquinas */
-export function ActualizarMarcoEsquinas(): void {
+function ActualizarMarcoEsquinas(): void {
 	if (!estado.esquinasDNI)
 		return;
 	const puntos = estado.esquinasDNI.map(EsquinaAEditor);
@@ -230,7 +230,7 @@ export function AplicarEsquinas(): Promise<void> {
  * Enderezar la imagen con las esquinas actuales, sin acumular peticiones si llegan más
  * mientras el worker está ocupado (por ejemplo al arrastrar una esquina rápidamente)
  */
-export function SolicitarEnderezado(): void {
+function SolicitarEnderezado(): void {
 	if (!estado.esquinasDNI || !EsConvexo(estado.esquinasDNI))
 		return;
 

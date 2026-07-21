@@ -1,0 +1,42 @@
+# En cada push a main construye el sitio y publica el resultado (dist) como un
+# zip en un tag/release, para poder descargarlo y ejecutarlo en local con un
+# servidor estático. No despliega en ningún hosting.
+name: Publicar build en un tag
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Empaquetar dist
+        run: cd dist && zip -r ../protege-mi-dni.zip . && cd ..
+      - name: Crear tag y release con el build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-$(date +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" protege-mi-dni.zip \
+            --title "$TAG" \
+            --notes "Build del sitio (commit ${{ github.sha }}).
+
+          Para ejecutarlo en local: descomprime el zip y sírvelo con un servidor
+          estático (necesita servidor, no se abre con doble clic), por ejemplo:
+
+              npx serve
+              # o
+              python3 -m http.server"

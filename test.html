@@ -1,18 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
 	<meta charset="UTF-8">
 	<title>Página de pruebas</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<link rel="stylesheet" type="text/css" href="estilos.css">
-	<link rel="stylesheet" type="text/css" href="test.css">
-	<link href="favicon.ico" rel="icon">
 	<meta name="robots" content="noindex, nofollow">
-
-	<!-- Si se usa el fichero en local, hay que quitar esta linea, esto debería ser un HTTP Header pero GitHub pages no lo soportan https://github.com/orgs/community/discussions/54257 -->
-	<!-- A diferencia del editor, esta página necesita connect-src 'self' para poder descargar la estructura de editor.html -->
-	<meta id="MetaCSP" http-equiv="Content-Security-Policy" content="script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' blob: data:; media-src 'none'; font-src 'self'; connect-src 'self' data:; frame-src 'none'; object-src 'none'; form-action 'none'; " />
-	<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+	{{> cabecera }}
 </head>
 <body>
 	<main>
@@ -20,31 +12,18 @@
 		<section id="introduccion">
 			<p>Pruebas para desarrollo: pincha en un DNI de ejemplo para cargarlo en el editor.</p>
 			<div id="Ejemplos">
-				<img src="ejemplos/dni4-frontal.webp" alt="DNI 4 frontal">
-				<img src="ejemplos/dni4-trasera.webp" alt="DNI 4 trasera">
-				<img src="ejemplos/dni3-frontal.webp" alt="DNI 3 frontal">
-				<img src="ejemplos/dni3-trasera.webp" alt="DNI 3 trasera">
-				<img src="ejemplos/dni1-frontal.webp" alt="DNI 1 frontal">
-				<img src="ejemplos/dni1-trasera.webp" alt="DNI 1 trasera">
+				<img src="/ejemplos/dni4-frontal.webp" alt="DNI 4 frontal">
+				<img src="/ejemplos/dni4-trasera.webp" alt="DNI 4 trasera">
+				<img src="/ejemplos/dni3-frontal.webp" alt="DNI 3 frontal">
+				<img src="/ejemplos/dni3-trasera.webp" alt="DNI 3 trasera">
+				<img src="/ejemplos/dni1-frontal.webp" alt="DNI 1 frontal">
+				<img src="/ejemplos/dni1-trasera.webp" alt="DNI 1 trasera">
 			</div>
 		</section>
-		<noscript>
-			<p>
-				Esta página necesita que actives el Javascript para poder ejecutarla. Todo el proceso se hace en tu navegador y es imprescindible el uso de javascript.
-			</p>
-			<style type="text/css">
-				noscript p {
-					margin: 2em;
-					font-weight: bold;
-					text-align: center;
-				}
-			</style>
-		</noscript>
-		<!-- aquí se inyecta la estructura del editor descargada de editor.html -->
-		<div id="ContenedorEditor"></div>
+		{{> editor }}
 	</main>
 
 	<footer>Página de pruebas. <a href="index.html">Ir a la principal</a></footer>
-	<script type="text/javascript" src="test.js"></script>
+	<script type="module" src="/src/editor/pruebas.ts"></script>
 </body>
 </html>

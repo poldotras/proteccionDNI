@@ -8,7 +8,6 @@
 	--colorFondoBotonPrincipal: #0D6EFD;
 	--colorFondoBotonPrincipalHover: #0B5ED7;
 	--colorAncla: light-dark(#555, #AAA);
-	--colorPie: light-dark(#EFEFEF, #333);
 	--colorFondoPagina: light-dark(#F2F5FA, #10141B);
 	--colorFondoTarjeta: light-dark(#FFF, #171B23);
 	--colorFondoSuave: light-dark(#F7F9FC, #1D2430);
@@ -118,11 +117,6 @@ select {
 	margin: 2em 0 1em;
 }
 
-#AyudaOcultarNumeroSoporte,
-#AyudaOcultarParcialmente {
-	font-size: 90%;
-}
-
 #Compartir {
 	margin-left: 1em;
 }
@@ -201,22 +195,6 @@ details li {
 
 #FAQ .respuesta {
 	padding: 0 14px 6px;
-}
-
-a.ancla {
-	margin-left: 0.5em;
-	opacity: 0;
-	text-decoration: none;
-}
-
-a.ancla svg {
-	fill: var(--colorAncla);
-	vertical-align: text-top;
-	width: 1.2em;
-}
-
-details:hover a.ancla {
-	opacity: 1;
 }
 
 footer {

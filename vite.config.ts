@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import handlebars from 'vite-plugin-handlebars';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 // Sitio multipágina servido en un dominio propio (protegemidni.es), de ahí base '/'.
 // El marcado común (cabecera y editor) se incluye desde src/partials/ en tiempo de
 // build con handlebars, y los módulos worker se empaquetan como ESM.
@@ -28,12 +30,10 @@ export default defineConfig(({ command }) => {
 
   return {
     base: '/',
-    plugins: [
-      handlebars({
-        partialDirectory: resolve(__dirname, 'src/partials'),
-        context: { csp },
-      }),
-    ],
+    plugins: [handlebars({
+      partialDirectory: resolve(__dirname, 'src/partials'),
+      context: { csp },
+    }), cloudflare()],
     build: {
       target: 'es2022',
       rollupOptions: {

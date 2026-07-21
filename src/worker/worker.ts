@@ -4,7 +4,7 @@
  * imagen está repartido en imagen.ts, deteccion.ts, hough.ts, refinado.ts y
  * enderezado.ts.
  */
-import type { Esquinas, Rectangulo, PeticionWorker, ConId } from '../tipos';
+import type { Esquinas, PeticionWorker, ConId } from '../tipos';
 import { ConvertirBN, PonerHorizontal, ReducirAnchura, AclararNegros, GirarImageData, BitmapDeImageData } from './imagen';
 import { DetectarTarjeta } from './deteccion';
 import { EnderezarTarjeta } from './enderezado';
@@ -27,37 +27,34 @@ function ProcesarImagenNueva(datos: { id: number; bitmap: ImageBitmap }): void {
 
 	imagenGris = null;
 	imagenColor = null;
-	let bitmapColor: ImageBitmap | null = null;
-	let esquinas: Esquinas | null = null;
-	let tarjeta: Rectangulo | null = null;
-	let recortada = false;
 	try {
 		const imgPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-		// guardamos una copia en color antes de convertir a blanco y negro
-		imagenColor = new ImageData(new Uint8ClampedArray(imgPixels.data), imgPixels.width, imgPixels.height);
-		// transferir vacía el canvas, pero mantiene su tamaño y se puede seguir dibujando
-		bitmapColor = canvas.transferToImageBitmap();
+		// copia en color (para el editor de esquinas) antes de convertir a blanco y negro;
+		// en su propio bitmap, para no vaciar el canvas de trabajo todavía
+		const color = new ImageData(new Uint8ClampedArray(imgPixels.data), imgPixels.width, imgPixels.height);
+		const bitmapColor = BitmapDeImageData(color);
 
 		ConvertirBN(imgPixels);
-		imagenGris = imgPixels;
-
 		const deteccion = DetectarTarjeta(imgPixels);
-		if (deteccion) {
-			tarjeta = deteccion.tarjeta;
-			esquinas = deteccion.esquinas || null;
-			recortada = !!deteccion.recortada;
-		}
+		const tarjeta = deteccion?.tarjeta ?? null;
+		const esquinas = deteccion?.esquinas ?? null;
+		const recortada = !!deteccion?.recortada;
 
-		// para la salida se aclaran los negros sobre una copia; imagenGris mantiene
-		// el rango completo, que es el que usan la detección y el enderezado
+		// para la salida se aclaran los negros sobre una copia; imgPixels mantiene el
+		// rango completo, que es el que usan la detección y el enderezado posteriores
 		const salida = new ImageData(new Uint8ClampedArray(imgPixels.data), imgPixels.width, imgPixels.height);
 		ctx.putImageData(AclararNegros(salida), 0, 0);
-	} catch {
-		// getImageData puede fallar con imágenes que contaminan el canvas
-	}
+		const bitmap = canvas.transferToImageBitmap();
 
-	const bitmap = canvas.transferToImageBitmap();
-	postMessage({ id: datos.id, bitmap, bitmapColor, esquinas, tarjeta, recortada });
+		// se guardan las imágenes de trabajo solo tras completar todo sin error
+		imagenColor = color;
+		imagenGris = imgPixels;
+		postMessage({ id: datos.id, bitmap, bitmapColor, esquinas, tarjeta, recortada });
+	} catch {
+		// si algo falla (getImageData con un canvas contaminado, falta de memoria...)
+		// se descarta el estado a medias y se devuelve la imagen sin procesar
+		postMessage({ id: datos.id, bitmap: canvas.transferToImageBitmap(), bitmapColor: null, esquinas: null, tarjeta: null, recortada: false });
+	}
 }
 
 /** Enderezar la última foto procesada usando las esquinas indicadas */
@@ -82,7 +79,7 @@ function ProcesarEnderezado(datos: { id: number; esquinas: Esquinas }): void {
 /** Girar 90º las imágenes guardadas y devolverlas, para cuando la foto está en la orientación equivocada */
 function ProcesarGiro(datos: { id: number; giro: number }): void {
 	if (!imagenGris) {
-		postMessage({ id: datos.id, bitmap: null });
+		postMessage({ id: datos.id, bitmap: null, bitmapColor: null });
 		return;
 	}
 

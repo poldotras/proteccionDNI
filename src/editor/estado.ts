@@ -19,6 +19,9 @@ interface Estado {
 	tarjetaResultado: Rectangulo | null;
 	/** Nombre del fichero elegido, para generar el nombre de la copia protegida */
 	nombreFichero: string;
+	/** Se incrementa al cargar cada foto; una respuesta del worker cuya generación
+	    no coincida con esta es de una foto anterior y se descarta */
+	generacion: number;
 }
 
 export const estado: Estado = {
@@ -28,4 +31,5 @@ export const estado: Estado = {
 	esquinasDNI: null,
 	tarjetaResultado: null,
 	nombreFichero: '',
+	generacion: 0,
 };

@@ -12,6 +12,7 @@ import {
 	DibujarEditorEsquinas,
 	AplicarEsquinas,
 	MostrarBotonDeteccion,
+	ReiniciarEnderezado,
 	configurarGiro,
 	configurarDeteccionManual,
 	configurarEditorEsquinas,
@@ -44,6 +45,9 @@ function RedibujarCapas(): void {
  */
 export function ComenzarEdicion(img: HTMLImageElement): void {
 	document.getElementById('Edicion')!.classList.remove('Oculto');
+	// marcar una foto nueva: descarta respuestas en vuelo de la anterior
+	estado.generacion++;
+	ReiniciarEnderezado();
 	estado.tarjetaResultado = null;
 	SortearMarcas();
 
@@ -65,6 +69,7 @@ function MostrarImagen(file: File): void {
 		ComenzarEdicion(img);
 	};
 	img.onerror = function (e) {
+		URL.revokeObjectURL(img.src);
 		console.error('No se ha podido cargar la imagen', e);
 		alert('Por favor, escoge una imagen válida');
 	};
@@ -94,9 +99,14 @@ function CrearBitmap(img: HTMLImageElement): Promise<ImageBitmap> {
  * detectando las esquinas de la tarjeta y enderezándola si es posible.
  */
 function PrepararDNI(img: HTMLImageElement): Promise<void> {
+	const generacion = estado.generacion;
 	return CrearBitmap(img)
-		.then(bitmap => enviarAlWorker<RespuestaProcesar>({ tipo: 'procesar', bitmap }))
+		// el bitmap se transfiere al worker (no lo necesitamos ya en el hilo principal)
+		.then(bitmap => enviarAlWorker<RespuestaProcesar>({ tipo: 'procesar', bitmap }, [bitmap]))
 		.then(function (respuesta) {
+			// descartar la respuesta si entretanto se ha cargado otra foto
+			if (generacion !== estado.generacion)
+				return;
 			estado.imagenOriginalBN = respuesta.bitmap;
 			// el editor de esquinas muestra la foto en color; si no está disponible, la de blanco y negro
 			estado.imagenOriginalColor = respuesta.bitmapColor || respuesta.bitmap;
@@ -160,7 +170,10 @@ function configurarDD(root: HTMLElement): void {
 
 		root.classList.remove('dragover');
 
+		// si se suelta algo que no es un fichero (texto, un enlace...) no hay nada que cargar
 		const fichero = dataTransfer.files[0];
+		if (!fichero)
+			return;
 		MostrarImagen(fichero);
 		estado.nombreFichero = fichero.name;
 	}, false);

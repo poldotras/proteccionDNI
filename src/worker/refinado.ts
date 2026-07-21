@@ -36,7 +36,8 @@ export function TonoInterior(imgPixels: ImageData, esquinas: Punto[]): number {
 				muestras.push(data[(y * imgPixels.width + x) * 4]);
 		}
 	}
-	return Mediana(muestras);
+	// si el cuadrilátero cae entero fuera de la imagen no hay muestras: gris neutro
+	return muestras.length ? Mediana(muestras) : 128;
 }
 
 /**

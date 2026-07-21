@@ -214,16 +214,33 @@ function ActualizarLupa(indice: number): void {
 
 /** Pide al worker enderezar la imagen con las esquinas actuales y actualiza la previsualización */
 export function AplicarEsquinas(): Promise<void> {
-	return enviarAlWorker<RespuestaEnderezar>({ tipo: 'enderezar', esquinas: estado.esquinasDNI! })
+	if (!estado.esquinasDNI)
+		return Promise.resolve();
+	const generacion = estado.generacion;
+	return enviarAlWorker<RespuestaEnderezar>({ tipo: 'enderezar', esquinas: estado.esquinasDNI })
 		.then(function (respuesta) {
+			// descartar la respuesta si ya se ha cargado otra foto
+			if (generacion !== estado.generacion)
+				return;
 			// el worker devuelve null si las esquinas no permiten calcular la transformación
 			if (!respuesta.bitmap)
 				return;
 
+			// liberar el resultado anterior, salvo que sea la imagen original compartida
+			const anterior = estado.imagenDNI_BN;
 			estado.imagenDNI_BN = respuesta.bitmap;
+			if (anterior && anterior !== estado.imagenOriginalBN && anterior !== estado.imagenOriginalColor)
+				anterior.close();
+
 			estado.tarjetaResultado = respuesta.tarjeta ?? null;
 			RedibujarDNI();
 		});
+}
+
+/** Reiniciar el control de enderezado al cargar una foto nueva */
+export function ReiniciarEnderezado(): void {
+	enderezadoEnCurso = false;
+	enderezadoPendiente = false;
 }
 
 /**
@@ -264,8 +281,12 @@ export function configurarDeteccionManual(): void {
 	const botonDeshacer = document.getElementById('DeshacerDeteccion')!;
 
 	botonDetectar.addEventListener('click', function () {
+		const generacion = estado.generacion;
 		enviarAlWorker<RespuestaDetectar>({ tipo: 'detectar' })
 			.then(function (respuesta) {
+				// descartar la respuesta si ya se ha cargado otra foto
+				if (generacion !== estado.generacion)
+					return;
 				const nuevas = respuesta.esquinas ||
 					(respuesta.tarjeta && RectanguloAEsquinas(respuesta.tarjeta));
 				if (!nuevas) {
@@ -314,8 +335,11 @@ function girarDNI(ev: Event): void {
 	const boton = ev.currentTarget as HTMLButtonElement;
 	const giro = parseInt(boton.dataset.giro!, 10);
 
+	const generacion = estado.generacion;
 	enviarAlWorker<RespuestaGirar>({ tipo: 'girar', giro })
 		.then(function (respuesta) {
+			if (generacion !== estado.generacion)
+				return;
 			if (!respuesta.bitmap || !estado.esquinasDNI)
 				return;
 
